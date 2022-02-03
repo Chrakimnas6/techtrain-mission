@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -36,7 +37,10 @@ func main() {
 	})
 
 	router.POST("/user/create", func(c *gin.Context) {
+		fmt.Println("I'm called!")
 		db := sqlConnect()
+		defer db.Close()
+
 		var user User
 		c.BindJSON(&user)
 		// //generate hash
@@ -52,14 +56,39 @@ func main() {
 		fmt.Println("create user " + user.Name + " with token " + user.Token)
 		db.Create(&user)
 
-		//redirect to the home page
-		c.Redirect(302, "/")
+		c.JSON(http.StatusOK, user.Name)
 	})
 
 	router.GET("/user/get", func(c *gin.Context) {
 		db := sqlConnect()
 		defer db.Close()
-		//token := c.GetHeader("x-token")
+
+		token := c.GetHeader("x-token")
+		fmt.Println("x-token: " + token)
+		var user User
+		if db.Where("token = ?", token).First(&user).RecordNotFound() {
+			c.JSON(http.StatusNotFound, "Not Found")
+		} else {
+			c.JSON(http.StatusOK, user.Name)
+		}
+	})
+
+	router.POST("/user/update", func(c *gin.Context) {
+		db := sqlConnect()
+		defer db.Close()
+
+		var user User
+		//c.BindJSON(&user)
+		token := c.GetHeader("x-token")
+		fmt.Println("x-token: " + token)
+		if db.Where("token = ?", token).First(&user).RecordNotFound() {
+			c.JSON(http.StatusNotFound, "Not Found")
+		} else {
+			c.BindJSON(&user)
+			db.Save(&user)
+			fmt.Println(user.Name)
+			c.JSON(http.StatusOK, user)
+		}
 
 	})
 
