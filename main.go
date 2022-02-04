@@ -1,14 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"time"
+	"training/controllers"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
 )
 
 type User struct {
@@ -18,113 +15,29 @@ type User struct {
 }
 
 func main() {
-	db := sqlConnect()
-	db.AutoMigrate(&User{})
-	defer db.Close()
-
-	router := gin.Default()
-	router.LoadHTMLGlob("templates/*.html")
-
-	router.GET("/", func(c *gin.Context) {
-		db := sqlConnect()
-		var users []User
-		db.Find(&users)
-		defer db.Close()
-
-		c.HTML(200, "index.html", gin.H{
-			"users": users,
-		})
-	})
-
-	router.POST("/user/create", func(c *gin.Context) {
-		fmt.Println("I'm called!")
-		db := sqlConnect()
-		defer db.Close()
-
-		var user User
-		c.BindJSON(&user)
-		// //generate hash
-		// h := sha1.New()
-		// s := user.Name + time.Now().String()
-		// fmt.Println(s)
-		// h.Write([]byte(s))
-		// token := h.Sum(nil)
-		token := uuid.New()
-
-		user.Token = string(token.String())
-
-		fmt.Println("create user " + user.Name + " with token " + user.Token)
-		db.Create(&user)
-
-		c.JSON(http.StatusOK, user.Name)
-	})
-
-	router.GET("/user/get", func(c *gin.Context) {
-		db := sqlConnect()
-		defer db.Close()
-
-		token := c.GetHeader("x-token")
-		fmt.Println("x-token: " + token)
-		var user User
-		if db.Where("token = ?", token).First(&user).RecordNotFound() {
-			c.JSON(http.StatusNotFound, "Not Found")
-		} else {
-			c.JSON(http.StatusOK, user.Name)
-		}
-	})
-
-	router.POST("/user/update", func(c *gin.Context) {
-		db := sqlConnect()
-		defer db.Close()
-
-		var user User
-		//c.BindJSON(&user)
-		token := c.GetHeader("x-token")
-		fmt.Println("x-token: " + token)
-		if db.Where("token = ?", token).First(&user).RecordNotFound() {
-			c.JSON(http.StatusNotFound, "Not Found")
-		} else {
-			c.BindJSON(&user)
-			db.Save(&user)
-			fmt.Println(user.Name)
-			c.JSON(http.StatusOK, user)
-		}
-
-	})
-
-	router.Run()
-
+	r := setupRouter()
+	r.Run()
 }
 
-func sqlConnect() (database *gorm.DB) {
-	DBMS := "mysql"
-	USER := "go_test"
-	PASS := "password"
-	PROTOCOL := "tcp(db:3306)"
-	DBNAME := "go_database"
+func setupRouter() *gin.Engine {
+	r := gin.Default()
+	// Showing contents of the database
+	r.LoadHTMLGlob("templates/*.html")
 
-	CONNECT := USER + ":" + PASS + "@" + PROTOCOL + "/" + DBNAME + "?charset=utf8&parseTime=true&loc=Asia%2FTokyo"
+	userRepo := controllers.New()
+	corsConfig := cors.DefaultConfig()
 
-	count := 0
-	db, err := gorm.Open(DBMS, CONNECT)
-	if err != nil {
-		for {
-			if err == nil {
-				fmt.Println("")
-				break
-			}
-			fmt.Print(".")
-			time.Sleep(time.Second)
-			count++
-			if count > 180 {
-				fmt.Println("")
-				fmt.Println("Connection failed")
-				panic(err)
-			}
-			db, err = gorm.Open(DBMS, CONNECT)
-		}
-	}
-	fmt.Println("Connection succeeded")
+	// CORS setting in order to receive from Swagger properly
+	corsConfig.AllowOrigins = []string{"*"}
+	corsConfig.AllowHeaders = []string{"*"}
+	corsConfig.AllowCredentials = true
+	r.Use(cors.New(corsConfig))
 
-	return db
+	// APIs
+	r.GET("/", userRepo.GetUsers)
+	r.POST("/user/create", userRepo.CreateUser)
+	r.GET("/user/get", userRepo.GetUser)
+	r.PUT("/user/update", userRepo.UpdateUser)
+
+	return r
 }

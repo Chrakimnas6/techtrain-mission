@@ -9,8 +9,9 @@ import (
 
 var db *gorm.DB
 
-func Init() {
-	DBMS := "mysql"
+// Start the connection to database
+func Init() *gorm.DB {
+	//DBMS := "mysql"
 	USER := "go_test"
 	PASS := "password"
 	PROTOCOL := "tcp(db:3306)"
@@ -19,8 +20,11 @@ func Init() {
 
 	db, err := gorm.Open(mysql.Open(CONNECT), &gorm.Config{})
 	if err != nil {
-		fmt.Println("Error connecting to database : error=%v", err)
+		fmt.Printf("Error connecting to database : error=%v", err)
+		return nil
 	}
+
+	return db
 }
 
 func GetDB() *gorm.DB {
