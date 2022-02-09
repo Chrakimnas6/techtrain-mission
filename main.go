@@ -2,29 +2,25 @@ package main
 
 import (
 	"training/controllers"
+	"training/db"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type User struct {
-	ID    uint   `gorm:"AUTO_INCREMENT"`
-	Name  string `json:"name"`
-	Token string
-}
-
 func main() {
-	r := setupRouter()
+	r := setupServer()
 	r.Run()
 }
 
-func setupRouter() *gin.Engine {
+func setupServer() *gin.Engine {
 	r := gin.Default()
 	// Showing contents of the database
 	r.LoadHTMLGlob("templates/*.html")
 
-	userRepo := controllers.New()
+	db := db.Init()
+	controller := controllers.New(db)
 	corsConfig := cors.DefaultConfig()
 
 	// CORS setting in order to receive from Swagger properly
@@ -33,11 +29,14 @@ func setupRouter() *gin.Engine {
 	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
 
-	// APIs
-	r.GET("/", userRepo.GetUsers)
-	r.POST("/user/create", userRepo.CreateUser)
-	r.GET("/user/get", userRepo.GetUser)
-	r.PUT("/user/update", userRepo.UpdateUser)
+	// APIs - user
+	r.GET("/", controller.GetUsers)
+	r.POST("/user/create", controller.CreateUser)
+	r.GET("/user/get", controller.GetUser)
+	r.PUT("/user/update", controller.UpdateUser)
+
+	// APIs - gacha
+	// APIs - character
 
 	return r
 }

@@ -3,8 +3,9 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"training/db"
+
 	"training/models"
+	"training/repos"
 
 	"net/http"
 
@@ -13,21 +14,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepo struct {
-	Db *gorm.DB
-}
-
-// Initialize new database of User
-func New() *UserRepo {
-	db := db.Init()
-	db.AutoMigrate(&models.User{})
-	return &UserRepo{Db: db}
-}
-
 // Get all users in the database
-func (repository *UserRepo) GetUsers(c *gin.Context) {
+func (controller *Controller) GetUsers(c *gin.Context) {
 	var users []models.User
-	err := models.GetUsers(repository.Db, &users)
+	err := repos.GetUsers(controller.Db, &users)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -39,13 +29,14 @@ func (repository *UserRepo) GetUsers(c *gin.Context) {
 
 // Create user with "name"
 // Use uuid to generate token for the user
-func (repository *UserRepo) CreateUser(c *gin.Context) {
+func (repository *Controller) CreateUser(c *gin.Context) {
 	var user models.User
+	// err
 	c.BindJSON(&user)
 	token := uuid.New()
 	user.Token = token.String()
 	fmt.Println("create user " + user.Name + " with token " + user.Token)
-	err := models.CreateUser(repository.Db, &user)
+	err := repos.CreateUser(repository.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -56,10 +47,10 @@ func (repository *UserRepo) CreateUser(c *gin.Context) {
 }
 
 // Get user by the token from Header
-func (repository *UserRepo) GetUser(c *gin.Context) {
+func (repository *Controller) GetUser(c *gin.Context) {
 	var user models.User
 	token := c.GetHeader("x-token")
-	err := models.GetUser(repository.Db, &user, token)
+	err := repos.GetUser(repository.Db, &user, token)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -74,10 +65,10 @@ func (repository *UserRepo) GetUser(c *gin.Context) {
 }
 
 // Update user by the token from Header with new name
-func (repository *UserRepo) UpdateUser(c *gin.Context) {
+func (repository *Controller) UpdateUser(c *gin.Context) {
 	var user models.User
 	token := c.GetHeader("x-token")
-	err := models.GetUser(repository.Db, &user, token)
+	err := repos.GetUser(repository.Db, &user, token)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -87,7 +78,7 @@ func (repository *UserRepo) UpdateUser(c *gin.Context) {
 		return
 	}
 	c.BindJSON(&user)
-	err = models.UpdateUser(repository.Db, &user)
+	err = repos.UpdateUser(repository.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
