@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 
 	"training/models"
 	"training/repos"
@@ -31,12 +30,14 @@ func (controller *Controller) GetUsers(c *gin.Context) {
 // Use uuid to generate token for the user
 func (repository *Controller) CreateUser(c *gin.Context) {
 	var user models.User
-	// err
-	c.BindJSON(&user)
+	err := c.BindJSON(&user)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
 	token := uuid.New()
 	user.Token = token.String()
-	fmt.Println("create user " + user.Name + " with token " + user.Token)
-	err := repos.CreateUser(repository.Db, &user)
+	err = repos.CreateUser(repository.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
