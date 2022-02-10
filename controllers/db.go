@@ -14,5 +14,7 @@ type Controller struct {
 func New(db *gorm.DB) *Controller {
 	// Create user table
 	db.AutoMigrate(&models.User{})
+	// Create character table
+	db.AutoMigrate(&models.Character{})
 	return &Controller{Db: db}
 }

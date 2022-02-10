@@ -36,7 +36,11 @@ func setupServer() *gin.Engine {
 	r.PUT("/user/update", controller.UpdateUser)
 
 	// APIs - gacha
+	//r.POST("/gacha/draw", controller.DrawGacha)
 	// APIs - character
+
+	// Internal Use
+	r.POST("/character/create", controller.CreateCharacter)
 
 	return r
 }

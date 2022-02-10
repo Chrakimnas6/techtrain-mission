@@ -28,7 +28,7 @@ func (controller *Controller) GetUsers(c *gin.Context) {
 
 // Create user with "name"
 // Use uuid to generate token for the user
-func (repository *Controller) CreateUser(c *gin.Context) {
+func (controller *Controller) CreateUser(c *gin.Context) {
 	var user models.User
 	err := c.BindJSON(&user)
 	if err != nil {
@@ -37,7 +37,7 @@ func (repository *Controller) CreateUser(c *gin.Context) {
 	}
 	token := uuid.New()
 	user.Token = token.String()
-	err = repos.CreateUser(repository.Db, &user)
+	err = repos.CreateUser(controller.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -48,10 +48,10 @@ func (repository *Controller) CreateUser(c *gin.Context) {
 }
 
 // Get user by the token from Header
-func (repository *Controller) GetUser(c *gin.Context) {
+func (controller *Controller) GetUser(c *gin.Context) {
 	var user models.User
 	token := c.GetHeader("x-token")
-	err := repos.GetUser(repository.Db, &user, token)
+	err := repos.GetUser(controller.Db, &user, token)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -66,10 +66,10 @@ func (repository *Controller) GetUser(c *gin.Context) {
 }
 
 // Update user by the token from Header with new name
-func (repository *Controller) UpdateUser(c *gin.Context) {
+func (controller *Controller) UpdateUser(c *gin.Context) {
 	var user models.User
 	token := c.GetHeader("x-token")
-	err := repos.GetUser(repository.Db, &user, token)
+	err := repos.GetUser(controller.Db, &user, token)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -78,8 +78,12 @@ func (repository *Controller) UpdateUser(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	c.BindJSON(&user)
-	err = repos.UpdateUser(repository.Db, &user)
+	err = c.BindJSON(&user)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	err = repos.UpdateUser(controller.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
