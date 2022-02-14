@@ -30,14 +30,15 @@ func setupServer() *gin.Engine {
 	r.Use(cors.New(corsConfig))
 
 	// APIs - user
-	r.GET("/", controller.GetUsers)
+	r.GET("/", controller.GetAll)
 	r.POST("/user/create", controller.CreateUser)
 	r.GET("/user/get", controller.GetUser)
 	r.PUT("/user/update", controller.UpdateUser)
 
 	// APIs - gacha
-	//r.POST("/gacha/draw", controller.DrawGacha)
+	r.POST("/gacha/draw", controller.DrawGacha)
 	// APIs - character
+	r.GET("/character/list", controller.GetUserCharacters)
 
 	// Internal Use
 	r.POST("/character/create", controller.CreateCharacter)

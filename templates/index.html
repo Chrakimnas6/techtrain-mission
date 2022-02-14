@@ -21,5 +21,18 @@
       </tr>
     {{ end }}
   </table>
+  <h2>キャラクター一覧</h2>
+  <table>
+    <tr>
+      <td>Name</td>
+      <td>ID</td>
+    </tr>
+    {{ range .characters }}
+    <tr>
+      <td>{{ .Name }}</td>
+      <td>{{ .ID }}</td>
+    </tr>
+    {{ end }}
+  </table>
 </body>
 </html>

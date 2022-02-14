@@ -90,3 +90,23 @@ func (controller *Controller) UpdateUser(c *gin.Context) {
 	}
 	c.Status(http.StatusOK)
 }
+
+// Get both users and characters from the database
+func (controller *Controller) GetAll(c *gin.Context) {
+	var users []models.User
+	var characters []models.Character
+	err := repos.GetUsers(controller.Db, &users)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	err = repos.GetCharacters(controller.Db, &characters)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	c.HTML(200, "index.html", gin.H{
+		"users":      users,
+		"characters": characters,
+	})
+}

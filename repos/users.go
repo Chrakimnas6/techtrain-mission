@@ -16,8 +16,8 @@ func CreateUser(db *gorm.DB, user *models.User) (err error) {
 }
 
 // Get all users
-func GetUsers(db *gorm.DB, user *[]models.User) (err error) {
-	err = db.Find(&user).Error
+func GetUsers(db *gorm.DB, users *[]models.User) (err error) {
+	err = db.Find(&users).Error
 	if err != nil {
 		return err
 	}
