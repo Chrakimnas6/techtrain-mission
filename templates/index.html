@@ -26,11 +26,13 @@
     <tr>
       <td>Name</td>
       <td>ID</td>
+      <td>Rank</td>
     </tr>
     {{ range .characters }}
     <tr>
       <td>{{ .Name }}</td>
       <td>{{ .ID }}</td>
+      <td>{{ .Rank }}</td>
     </tr>
     {{ end }}
   </table>

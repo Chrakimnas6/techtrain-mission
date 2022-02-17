@@ -34,31 +34,37 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		return
 	}
 	// Start the gacha, get number of characters
-	// Suppose all characters have same odds
+	// Suppose the probability of getting SSR, SR and R is 1 : 10 : 89
+	// Generate a number from 1 to 100
 	var gachaResultResponse []models.GachaResultResponse
-	// Get number of characters
-	var size int64
-	err = repos.GetSize(controller.Db, &size)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-	}
 	for i := 0; i < int(gacha.Times); i++ {
-		// Randomly pick a character
-		characterID := rand.Intn(int(size)) + 1
-		userCharacter := models.UserCharacter{UserID: user.ID, CharacterID: uint(characterID)}
+		var characterID uint
+		n := rand.Intn(100) + 1
+		if n == 1 {
+			err = repos.GetRandCharacter(controller.Db, &characterID, "ssr")
+		} else if n <= 11 {
+			err = repos.GetRandCharacter(controller.Db, &characterID, "sr")
+		} else {
+			err = repos.GetRandCharacter(controller.Db, &characterID, "r")
+		}
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		}
+		// Create user_character
+		userCharacter := models.UserCharacter{UserID: user.ID, CharacterID: characterID}
 		err = repos.CreateUserCharacter(controller.Db, &userCharacter)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
 		var character models.Character
-		err = repos.GetCharacter(controller.Db, &character, uint(characterID))
+		err = repos.GetCharacter(controller.Db, &character, characterID)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
 
-		gachaResultResponse = append(gachaResultResponse, models.GachaResultResponse{CharacterID: strconv.Itoa(characterID), Name: character.Name})
+		gachaResultResponse = append(gachaResultResponse, models.GachaResultResponse{CharacterID: strconv.Itoa(int(characterID)), Name: character.Name})
 	}
 
 	c.JSON(http.StatusOK, gin.H{

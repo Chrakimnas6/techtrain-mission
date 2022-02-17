@@ -26,21 +26,6 @@ func (controller *Controller) GetAllUserCharacters(c *gin.Context) {
 	}
 
 	var userCharactersResponses []models.UserCharacterResponse
-	// for _, userCharacter := range userCharacters {
-	// 	// Get character by character ID
-	// 	var character models.Character
-	// 	err = repos.GetCharacter(controller.Db, &character, uint(userCharacter.CharacterID))
-	// 	if err != nil {
-	// 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-	// 		return
-	// 	}
-	// 	// Convert fileds into string according to the reponse
-	// 	userCharactersResponses = append(userCharactersResponses, models.UserCharacterResponse{
-	// 		UserCharacterID: strconv.Itoa(int(userCharacter.ID)),
-	// 		CharacterID:     strconv.Itoa(int(userCharacter.CharacterID)),
-	// 		Name:            character.Name,
-	// 	})
-	// }
 	err = helpers.Convert(controller.Db, &userCharacters, &userCharactersResponses)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})

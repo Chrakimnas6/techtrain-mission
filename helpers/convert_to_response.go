@@ -14,7 +14,6 @@ func Convert(db *gorm.DB, userCharacters *[]models.UserCharacter, userCharacters
 		var character models.Character
 		err := repos.GetCharacter(db, &character, uint(userCharacter.CharacterID))
 		if err != nil {
-			//c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return err
 		}
 		// Convert fileds into string according to the reponse
