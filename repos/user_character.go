@@ -26,7 +26,7 @@ func GetAllUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (
 
 // Get specific user's user_characters
 func GetUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter, userID uint) (err error) {
-	err = db.Find(&userCharacters).Where("user_id = ?", userID).Error
+	err = db.Where("user_id = ?", userID).Find(&userCharacters).Error
 	if err != nil {
 		return err
 	}
