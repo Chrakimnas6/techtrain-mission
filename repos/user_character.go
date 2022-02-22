@@ -15,6 +15,15 @@ func CreateUserCharacter(db *gorm.DB, userCharacter *models.UserCharacter) (err 
 	return nil
 }
 
+// Create user_characters
+func CreateUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (err error) {
+	err = db.Create(&userCharacters).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Get all user_characters
 func GetAllUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (err error) {
 	err = db.Find(&userCharacters).Error

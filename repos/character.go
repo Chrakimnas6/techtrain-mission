@@ -74,3 +74,54 @@ func GetRandCharacter(db *gorm.DB, characterID *uint, dbName string) (err error)
 	}
 	return nil
 }
+
+// Get how many SSR cards are there in the database
+func GetSSRSize(db *gorm.DB, size *int64) (err error) {
+	err = db.Model(&models.CharacterSSR{}).Count(size).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get how many SSR cards are there in the database
+func GetSRSize(db *gorm.DB, size *int64) (err error) {
+	err = db.Model(&models.CharacterSR{}).Count(size).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get how many SSR cards are there in the database
+func GetRSize(db *gorm.DB, size *int64) (err error) {
+	err = db.Model(&models.CharacterR{}).Count(size).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetSSR(db *gorm.DB, character *models.CharacterSSR, id uint) (err error) {
+	err = db.First(&character, id).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetSR(db *gorm.DB, character *models.CharacterSR, id uint) (err error) {
+	err = db.First(&character, id).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetR(db *gorm.DB, character *models.CharacterR, id uint) (err error) {
+	err = db.First(&character, id).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

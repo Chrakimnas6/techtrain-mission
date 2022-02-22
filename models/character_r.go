@@ -1,5 +1,6 @@
 package models
 
 type CharacterR struct {
-	CharacterID uint `gorm:"primaryKey"`
+	ID          uint `gorm:"autoIncrement"`
+	CharacterID uint
 }

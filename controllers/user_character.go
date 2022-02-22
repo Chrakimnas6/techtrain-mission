@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	//"strconv"
@@ -56,7 +55,6 @@ func (controller *Controller) GetUserCharacters(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	fmt.Println(len(userCharacters))
 
 	var userCharactersResponses []models.UserCharacterResponse
 	err = helpers.Convert(controller.Db, &userCharacters, &userCharactersResponses)
