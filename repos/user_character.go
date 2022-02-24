@@ -17,7 +17,7 @@ func CreateUserCharacter(db *gorm.DB, userCharacter *models.UserCharacter) (err 
 
 // Create user_characters
 func CreateUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (err error) {
-	err = db.Create(&userCharacters).Error
+	err = db.CreateInBatches(&userCharacters, 1000).Error
 	if err != nil {
 		return err
 	}

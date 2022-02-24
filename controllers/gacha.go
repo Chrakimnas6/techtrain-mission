@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"training/models"
 	"training/repos"
 
@@ -33,106 +34,70 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
+
 	// Start the gacha, get number of characters
 	// Suppose the probability of getting SSR, SR and R is 1 : 10 : 89
 	// Generate a number from 1 to 100
-	var gachaResultResponse []models.GachaResultResponse
-	var ssrSize, srSize, rSize int64
-	// Create map to record how many times a character appears.
-	ssrIDToNumber, srIDToNumber, rIDToNumber := make(map[int]int), make(map[int]int), make(map[int]int)
+	var gachaResultResponse = make([]models.GachaResultResponse, gacha.Times)
 
-	// Get current number of SSR, SR, R cards
-	err = repos.GetSSRSize(controller.Db, &ssrSize)
+	// Get all different types of characters from database
+	var ssrCharacters, srCharacters, rCharacters []models.Character
+
+	err = repos.GetAllSpecificCharacters(controller.Db, &ssrCharacters, "ssr")
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
-
-	err = repos.GetSRSize(controller.Db, &srSize)
+	err = repos.GetAllSpecificCharacters(controller.Db, &srCharacters, "sr")
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
-
-	err = repos.GetRSize(controller.Db, &rSize)
+	err = repos.GetAllSpecificCharacters(controller.Db, &rCharacters, "r")
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
+	ssrNumbers, srNumbers, rNumbers := len(ssrCharacters), len(srCharacters), len(rCharacters)
 
+	idToCount := make(map[int]int)
+
+	// Simulate the gacha and record appearance time for each character
 	for i := 0; i < int(gacha.Times); i++ {
 		n := rand.Intn(100) + 1
-		// Get number of different types of cards
 		if n == 1 {
-			//err = repos.GetRandCharacter(controller.Db, &characterID, "ssr")
-			ssrID := rand.Intn(int(ssrSize)) + 1
-			ssrIDToNumber[ssrID]++
+			idToCount[int(ssrCharacters[rand.Intn(ssrNumbers)].ID)]++
 
 		} else if n <= 11 {
-			//err = repos.GetRandCharacter(controller.Db, &characterID, "sr")
-			srID := rand.Intn(int(srSize)) + 1
-			srIDToNumber[srID]++
+			idToCount[int(srCharacters[rand.Intn(srNumbers)].ID)]++
 		} else {
-			//err = repos.GetRandCharacter(controller.Db, &characterID, "r")
-			rID := rand.Intn(int(rSize)) + 1
-			rIDToNumber[rID]++
+			idToCount[int(rCharacters[rand.Intn(rNumbers)].ID)]++
 		}
 	}
+	index := 0
 
-	// TODO: Create user_character
-	//var userCharacters []models.UserCharacter
-	for ssrID, numbers := range ssrIDToNumber {
-		var ssrCharacter models.CharacterSSR
-		err = repos.GetSSR(controller.Db, &ssrCharacter, uint(ssrID))
-		userCharacters := make([]models.UserCharacter, numbers)
-		for i := range userCharacters {
-			userCharacters[i] = models.UserCharacter{UserID: user.ID, CharacterID: ssrCharacter.CharacterID}
+	for id, count := range idToCount {
+		userCharacters := make([]models.UserCharacter, count)
+		var character models.Character
+		err := repos.GetCharacter(controller.Db, &character, uint(id))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
 		}
+		idString := strconv.Itoa(id)
+		name := character.Name
+		for i := range userCharacters {
+			userCharacters[i] = models.UserCharacter{UserID: user.ID, CharacterID: uint(id)}
+			gachaResultResponse[index] = models.GachaResultResponse{CharacterID: idString, Name: name}
+			index++
+		}
+
 		err = repos.CreateUserCharacters(controller.Db, &userCharacters)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
 	}
-
-	for srID, numbers := range srIDToNumber {
-		var srCharacter models.CharacterSR
-		err = repos.GetSR(controller.Db, &srCharacter, uint(srID))
-		userCharacters := make([]models.UserCharacter, numbers)
-		for i := range userCharacters {
-			userCharacters[i] = models.UserCharacter{UserID: user.ID, CharacterID: srCharacter.CharacterID}
-		}
-		err = repos.CreateUserCharacters(controller.Db, &userCharacters)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
-
-	for rID, numbers := range rIDToNumber {
-		var rCharacter models.CharacterR
-		err = repos.GetR(controller.Db, &rCharacter, uint(rID))
-		userCharacters := make([]models.UserCharacter, numbers)
-		for i := range userCharacters {
-			userCharacters[i] = models.UserCharacter{UserID: user.ID, CharacterID: rCharacter.CharacterID}
-		}
-		err = repos.CreateUserCharacters(controller.Db, &userCharacters)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
-	// userCharacter := models.UserCharacter{UserID: user.ID, CharacterID: characterID}
-	// err = repos.CreateUserCharacter(controller.Db, &userCharacter)
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-	// 	return
-	// }
-	// var character models.Character
-	// err = repos.GetCharacter(controller.Db, &character, characterID)
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-	// 	return
-	// }
-
-	// gachaResultResponse = append(gachaResultResponse, models.GachaResultResponse{CharacterID: strconv.Itoa(int(characterID)), Name: character.Name})
 
 	c.JSON(http.StatusOK, gin.H{
 		"results": gachaResultResponse,

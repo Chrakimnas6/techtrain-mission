@@ -52,6 +52,18 @@ func GetSize(db *gorm.DB, size *int64) (err error) {
 // Get character by ID
 func GetCharacter(db *gorm.DB, character *models.Character, id uint) (err error) {
 	err = db.Model(&models.Character{}).First(&character, id).Error
+	//err = db.First(&character, id).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get specific type characters
+func GetAllSpecificCharacters(db *gorm.DB, characters *[]models.Character, characterType string) (err error) {
+	//TODO: why this not work???
+	//err = db.Where("rank = ?", characterType).Find(&characters).Error
+	err = db.Raw("SELECT * FROM `go_database`.`characters` WHERE `rank` = ?", characterType).Scan(&characters).Error
 	if err != nil {
 		return err
 	}
@@ -84,7 +96,7 @@ func GetSSRSize(db *gorm.DB, size *int64) (err error) {
 	return nil
 }
 
-// Get how many SSR cards are there in the database
+// Get how many SR cards are there in the database
 func GetSRSize(db *gorm.DB, size *int64) (err error) {
 	err = db.Model(&models.CharacterSR{}).Count(size).Error
 	if err != nil {
@@ -93,7 +105,7 @@ func GetSRSize(db *gorm.DB, size *int64) (err error) {
 	return nil
 }
 
-// Get how many SSR cards are there in the database
+// Get how many R cards are there in the database
 func GetRSize(db *gorm.DB, size *int64) (err error) {
 	err = db.Model(&models.CharacterR{}).Count(size).Error
 	if err != nil {
