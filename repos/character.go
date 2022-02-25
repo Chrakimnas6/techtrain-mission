@@ -12,21 +12,6 @@ func CreateCharacter(db *gorm.DB, character *models.Character) (err error) {
 	if err != nil {
 		return err
 	}
-	// Also add character to different databases depends on its rank
-	switch character.Rank {
-	case "ssr":
-		character_ssr := &models.CharacterSSR{CharacterID: character.ID}
-		err = db.Create(&character_ssr).Error
-	case "sr":
-		character_sr := &models.CharacterSR{CharacterID: character.ID}
-		err = db.Create(&character_sr).Error
-	case "r":
-		character_r := &models.CharacterR{CharacterID: character.ID}
-		err = db.Create(&character_r).Error
-	}
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -64,74 +49,6 @@ func GetAllSpecificCharacters(db *gorm.DB, characters *[]models.Character, chara
 	//TODO: why this not work???
 	//err = db.Where("rank = ?", characterType).Find(&characters).Error
 	err = db.Raw("SELECT * FROM `go_database`.`characters` WHERE `rank` = ?", characterType).Scan(&characters).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Get random character_id from requested database
-func GetRandCharacter(db *gorm.DB, characterID *uint, dbName string) (err error) {
-	switch dbName {
-	case "ssr":
-		err = db.Raw("SELECT character_id FROM character_ssrs ORDER BY RAND() LIMIT 1").Scan(characterID).Error
-	case "sr":
-		err = db.Raw("SELECT character_id FROM character_srs ORDER BY RAND() LIMIT 1").Scan(characterID).Error
-	case "r":
-		err = db.Raw("SELECT character_id FROM character_rs ORDER BY RAND() LIMIT 1").Scan(characterID).Error
-	}
-
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Get how many SSR cards are there in the database
-func GetSSRSize(db *gorm.DB, size *int64) (err error) {
-	err = db.Model(&models.CharacterSSR{}).Count(size).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Get how many SR cards are there in the database
-func GetSRSize(db *gorm.DB, size *int64) (err error) {
-	err = db.Model(&models.CharacterSR{}).Count(size).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Get how many R cards are there in the database
-func GetRSize(db *gorm.DB, size *int64) (err error) {
-	err = db.Model(&models.CharacterR{}).Count(size).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetSSR(db *gorm.DB, character *models.CharacterSSR, id uint) (err error) {
-	err = db.First(&character, id).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetSR(db *gorm.DB, character *models.CharacterSR, id uint) (err error) {
-	err = db.First(&character, id).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetR(db *gorm.DB, character *models.CharacterR, id uint) (err error) {
-	err = db.First(&character, id).Error
 	if err != nil {
 		return err
 	}

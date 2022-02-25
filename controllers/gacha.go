@@ -13,7 +13,6 @@ import (
 )
 
 // Draw with times get from request's body
-// TODO: move parts of the function to helper
 func (controller *Controller) DrawGacha(c *gin.Context) {
 	// Get user with the token from Header
 	var user models.User
@@ -74,8 +73,8 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 			idToCount[int(rCharacters[rand.Intn(rNumbers)].ID)]++
 		}
 	}
-	index := 0
 
+	index := 0
 	for id, count := range idToCount {
 		userCharacters := make([]models.UserCharacter, count)
 		var character models.Character

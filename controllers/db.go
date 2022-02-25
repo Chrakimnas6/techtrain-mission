@@ -18,9 +18,5 @@ func New(db *gorm.DB) *Controller {
 	db.AutoMigrate(&models.Character{})
 	// Create user_character table
 	db.AutoMigrate(&models.UserCharacter{})
-	// Create tables for different types of cards
-	db.AutoMigrate(&models.CharacterSSR{})
-	db.AutoMigrate(&models.CharacterSR{})
-	db.AutoMigrate(&models.CharacterR{})
 	return &Controller{Db: db}
 }
