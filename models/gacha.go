@@ -1,6 +1,6 @@
 package models
 
 type Gacha struct {
-	ID    uint `gorm:"autoIncrement"`
+	ID    uint
 	Times uint `gorm:"not null" json:"times"`
 }

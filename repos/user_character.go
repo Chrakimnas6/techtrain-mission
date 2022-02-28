@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"fmt"
 	"training/models"
 
 	"gorm.io/gorm"
@@ -17,7 +18,8 @@ func CreateUserCharacter(db *gorm.DB, userCharacter *models.UserCharacter) (err 
 
 // Create user_characters
 func CreateUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (err error) {
-	err = db.CreateInBatches(&userCharacters, 1000).Error
+	//err = db.CreateInBatches(&userCharacters, 1000).Error
+	err = db.Create(&userCharacters).Error
 	if err != nil {
 		return err
 	}
@@ -33,9 +35,10 @@ func GetAllUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (
 	return nil
 }
 
-// Get specific user's user_characters
-func GetUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter, userID uint) (err error) {
-	err = db.Where("user_id = ?", userID).Find(&userCharacters).Error
+// Get specific user's user_characters with required response
+func GetUserCharacters(db *gorm.DB, userCharactersResponses *[]models.UserCharacterResponse, userID uint) (err error) {
+	fmt.Println(userID)
+	err = db.Model(&models.UserCharacter{}).Select("user_characters.id as UserCharacterID, characters.id as CharacterID, characters.name as Name").Joins("inner join characters on user_characters.character_id = characters.id").Where("user_characters.user_id = ?", userID).Scan(&userCharactersResponses).Error
 	if err != nil {
 		return err
 	}

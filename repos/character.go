@@ -15,6 +15,15 @@ func CreateCharacter(db *gorm.DB, character *models.Character) (err error) {
 	return nil
 }
 
+// Create a character odds
+func CreateGachaCharacterOdds(db *gorm.DB, characterOdds *models.GachaCharacterOdds) (err error) {
+	err = db.Create(&characterOdds).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Get all characters
 func GetCharacters(db *gorm.DB, characters *[]models.Character) (err error) {
 	err = db.Find(&characters).Error
@@ -46,11 +55,24 @@ func GetCharacter(db *gorm.DB, character *models.Character, id uint) (err error)
 
 // Get specific type characters
 func GetAllSpecificCharacters(db *gorm.DB, characters *[]models.Character, characterType string) (err error) {
-	//TODO: why this not work???
 	//err = db.Where("rank = ?", characterType).Find(&characters).Error
 	err = db.Raw("SELECT * FROM `go_database`.`characters` WHERE `rank` = ?", characterType).Scan(&characters).Error
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// Get join information from characters and characters_odds
+// TODO: add Where gacha_id = ? for selecting the gacha type
+func GetCharactersOddsComb(db *gorm.DB, charactersOddsComb *[]struct {
+	models.GachaCharacterOdds
+	models.Character
+}) (err error) {
+	err = db.Model(&models.GachaCharacterOdds{}).Select("*").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Scan(&charactersOddsComb).Error
+	if err != nil {
+		return err
+	}
+	return nil
+
 }

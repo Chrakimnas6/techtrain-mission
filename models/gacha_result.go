@@ -1,6 +1,6 @@
 package models
 
-type GachaResultResponse struct {
+type GachaResult struct {
 	CharacterID string `json:"characterID"`
 	Name        string `json:"name"`
 }

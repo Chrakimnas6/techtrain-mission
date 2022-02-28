@@ -34,72 +34,44 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		return
 	}
 
-	// Start the gacha, get number of characters
-	// Suppose the probability of getting SSR, SR and R is 1 : 10 : 89
-	// Generate a number from 1 to 100
-	var gachaResultResponse = make([]models.GachaResultResponse, gacha.Times)
-
-	// Get all different types of characters from database
-	var ssrCharacters, srCharacters, rCharacters []models.Character
-
-	err = repos.GetAllSpecificCharacters(controller.Db, &ssrCharacters, "ssr")
+	// Get combined information of users
+	var charactersOddsComb []struct {
+		models.GachaCharacterOdds
+		models.Character
+	}
+	err = repos.GetCharactersOddsComb(controller.Db, &charactersOddsComb)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	err = repos.GetAllSpecificCharacters(controller.Db, &srCharacters, "sr")
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	err = repos.GetAllSpecificCharacters(controller.Db, &rCharacters, "r")
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	ssrNumbers, srNumbers, rNumbers := len(ssrCharacters), len(srCharacters), len(rCharacters)
 
-	idToCount := make(map[int]int)
+	var gachaResults []models.GachaResult
+	var userCharacters []models.UserCharacter
 
-	// Simulate the gacha and record appearance time for each character
+	// Suppose all cards' possibilities sum up to 1 in a certain type of gacha pool
 	for i := 0; i < int(gacha.Times); i++ {
-		n := rand.Intn(100) + 1
-		if n == 1 {
-			idToCount[int(ssrCharacters[rand.Intn(ssrNumbers)].ID)]++
-
-		} else if n <= 11 {
-			idToCount[int(srCharacters[rand.Intn(srNumbers)].ID)]++
-		} else {
-			idToCount[int(rCharacters[rand.Intn(rNumbers)].ID)]++
+		num := rand.Float64()
+		oddsSum := 0.0
+		for _, character := range charactersOddsComb {
+			oddsSum += character.Odds
+			if num <= oddsSum {
+				userCharacters = append(userCharacters, models.UserCharacter{
+					UserID:      user.ID,
+					CharacterID: character.CharacterID,
+				})
+				gachaResults = append(gachaResults, models.GachaResult{
+					CharacterID: strconv.Itoa(int(character.CharacterID)),
+					Name:        character.Name,
+				})
+				break
+			}
 		}
 	}
 
-	index := 0
-	for id, count := range idToCount {
-		userCharacters := make([]models.UserCharacter, count)
-		var character models.Character
-		err := repos.GetCharacter(controller.Db, &character, uint(id))
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-		idString := strconv.Itoa(id)
-		name := character.Name
-		for i := range userCharacters {
-			userCharacters[i] = models.UserCharacter{UserID: user.ID, CharacterID: uint(id)}
-			gachaResultResponse[index] = models.GachaResultResponse{CharacterID: idString, Name: name}
-			index++
-		}
-
-		err = repos.CreateUserCharacters(controller.Db, &userCharacters)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
+	err = repos.CreateUserCharacters(controller.Db, &userCharacters)
 
 	c.JSON(http.StatusOK, gin.H{
-		"results": gachaResultResponse,
+		"results": gachaResults,
 	})
 
 }
