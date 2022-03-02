@@ -24,6 +24,15 @@ func CreateGachaCharacterOdds(db *gorm.DB, characterOdds *models.GachaCharacterO
 	return nil
 }
 
+// Create character odds
+func CreateGachaCharacterOddsAll(db *gorm.DB, characterOdds *[]models.GachaCharacterOdds) (err error) {
+	err = db.Create(&characterOdds).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Get all characters
 func GetCharacters(db *gorm.DB, characters *[]models.Character) (err error) {
 	err = db.Find(&characters).Error
@@ -68,8 +77,8 @@ func GetAllSpecificCharacters(db *gorm.DB, characters *[]models.Character, chara
 func GetCharactersOddsComb(db *gorm.DB, charactersOddsComb *[]struct {
 	models.GachaCharacterOdds
 	models.Character
-}) (err error) {
-	err = db.Model(&models.GachaCharacterOdds{}).Select("*").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Scan(&charactersOddsComb).Error
+}, gachaID uint) (err error) {
+	err = db.Model(&models.GachaCharacterOdds{}).Select("*").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Where("gacha_character_odds.gacha_id = ?", gachaID).Scan(&charactersOddsComb).Error
 	if err != nil {
 		return err
 	}

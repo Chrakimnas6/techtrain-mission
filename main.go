@@ -41,7 +41,12 @@ func setupServer() *gin.Engine {
 	r.GET("/character/list", controller.GetUserCharacters)
 
 	// Internal Use
+	// Create new character
 	r.POST("/character/create", controller.CreateCharacter)
+	// Update possibility
+	r.PUT("/gacha/update", controller.UpdatePossibility)
+	// Create new gacha pool
+	r.POST("/gacha/create", controller.CreateGachaPool)
 
 	return r
 }

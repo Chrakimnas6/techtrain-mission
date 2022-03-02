@@ -28,6 +28,8 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 	}
 	// Get gacha times from JSON body
 	var gacha models.Gacha
+	// Default value
+	gacha.ID = 1
 	err = c.BindJSON(&gacha)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
@@ -39,7 +41,7 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		models.GachaCharacterOdds
 		models.Character
 	}
-	err = repos.GetCharactersOddsComb(controller.Db, &charactersOddsComb)
+	err = repos.GetCharactersOddsComb(controller.Db, &charactersOddsComb, gacha.ID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
@@ -74,4 +76,49 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		"results": gachaResults,
 	})
 
+}
+
+// Create new gacha pool
+func (controller *Controller) CreateGachaPool(c *gin.Context) {
+	var gachaCharacterOddsAll []models.GachaCharacterOdds
+	err := repos.GetDefaultGachaPool(controller.Db, &gachaCharacterOddsAll)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	var idNew uint
+	err = repos.GetNewestGachaID(controller.Db, &idNew)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	// Increment id by 1, indicating the new gacha pool
+	idNew += 1
+	for i, gachaCharacterOdds := range gachaCharacterOddsAll {
+		gachaCharacterOdds.GachaID = idNew
+		gachaCharacterOddsAll[i] = gachaCharacterOdds
+	}
+	err = repos.CreateGachaCharacterOddsAll(controller.Db, &gachaCharacterOddsAll)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gachaCharacterOddsAll)
+}
+
+// Update possibility
+func (controller *Controller) UpdatePossibility(c *gin.Context) {
+	var gachaCharacterOdds models.GachaCharacterOdds
+	err := c.BindJSON(&gachaCharacterOdds)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	err = repos.UpdatePossibility(controller.Db, &gachaCharacterOdds)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	c.JSON(http.StatusOK, gachaCharacterOdds)
 }

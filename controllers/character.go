@@ -40,7 +40,7 @@ func (controller *Controller) CreateCharacter(c *gin.Context) {
 		return
 	}
 	// Create character's odd
-	// TODO: Currently only one type of gacha pool and the default id is 1
+	// The default gacha id is 1
 	characterOdds := models.GachaCharacterOdds{
 		GachaID:     1,
 		CharacterID: character.ID,
