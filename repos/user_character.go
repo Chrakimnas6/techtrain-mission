@@ -1,7 +1,6 @@
 package repos
 
 import (
-	"fmt"
 	"training/models"
 
 	"gorm.io/gorm"
@@ -36,9 +35,11 @@ func GetAllUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (
 }
 
 // Get specific user's user_characters with required response
-func GetUserCharacters(db *gorm.DB, userCharactersResponses *[]models.UserCharacterResponse, userID uint) (err error) {
-	fmt.Println(userID)
-	err = db.Model(&models.UserCharacter{}).Select("user_characters.id as UserCharacterID, characters.id as CharacterID, characters.name as Name").Joins("inner join characters on user_characters.character_id = characters.id").Where("user_characters.user_id = ?", userID).Scan(&userCharactersResponses).Error
+func GetUserCharacters(db *gorm.DB, userCharactersResponses *[]models.UserCharacterResponse, limit int, offset int, userID uint) (err error) {
+	err = db.Offset(offset).Limit(limit).
+		Model(&models.UserCharacter{}).
+		Select("user_characters.id as UserCharacterID, characters.id as CharacterID, characters.name as Name").
+		Joins("inner join characters on user_characters.character_id = characters.id").Where("user_characters.user_id = ?", userID).Scan(&userCharactersResponses).Error
 	if err != nil {
 		return err
 	}
