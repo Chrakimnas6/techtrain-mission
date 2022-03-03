@@ -36,5 +36,20 @@
     </tr>
     {{ end }}
   </table>
+  <h2>Gacha Types</h2>
+  <table>
+    <tr>
+      <td>Gacha ID</td>
+      <td>Character ID</td>
+      <td>Odds</td>
+    </tr>
+    {{ range .gacha_character_odds }}
+    <tr>
+      <td>{{ .GachaID }}</td>
+      <td>{{ .CharacterID }}</td>
+      <td>{{ .Odds }}</td>
+    </tr>
+    {{ end }}
+  </table>
 </body>
 </html>

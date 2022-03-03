@@ -33,6 +33,15 @@ func CreateGachaCharacterOddsAll(db *gorm.DB, characterOdds *[]models.GachaChara
 	return nil
 }
 
+// Get character odds
+func GetGachaCharacterOddsAll(db *gorm.DB, characterOdds *[]models.GachaCharacterOdds) (err error) {
+	err = db.Find(&characterOdds).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Get all characters
 func GetCharacters(db *gorm.DB, characters *[]models.Character) (err error) {
 	err = db.Find(&characters).Error

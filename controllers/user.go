@@ -95,6 +95,7 @@ func (controller *Controller) UpdateUser(c *gin.Context) {
 func (controller *Controller) GetAll(c *gin.Context) {
 	var users []models.User
 	var characters []models.Character
+	var characterOdds []models.GachaCharacterOdds
 	err := repos.GetUsers(controller.Db, &users)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -105,8 +106,14 @@ func (controller *Controller) GetAll(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+	err = repos.GetGachaCharacterOddsAll(controller.Db, &characterOdds)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 	c.HTML(200, "index.html", gin.H{
-		"users":      users,
-		"characters": characters,
+		"users":                users,
+		"characters":           characters,
+		"gacha_character_odds": characterOdds,
 	})
 }
