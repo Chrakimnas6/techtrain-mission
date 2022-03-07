@@ -34,12 +34,10 @@ func GetAllUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter) (
 	return nil
 }
 
-// Get specific user's user_characters with required response
-func GetUserCharacters(db *gorm.DB, userCharactersResponses *[]models.UserCharacterResponse, limit int, offset int, userID uint) (err error) {
+// Get specific user's user_characters
+func GetUserCharacters(db *gorm.DB, userCharacters *[]models.UserCharacter, limit int, offset int, userID uint) (err error) {
 	err = db.Offset(offset).Limit(limit).
-		Model(&models.UserCharacter{}).
-		Select("user_characters.id as UserCharacterID, characters.id as CharacterID, characters.name as Name").
-		Joins("inner join characters on user_characters.character_id = characters.id").Where("user_characters.user_id = ?", userID).Scan(&userCharactersResponses).Error
+		Find(&userCharacters).Where("user_characters.user_id = ?", userID).Error
 	if err != nil {
 		return err
 	}

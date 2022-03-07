@@ -12,6 +12,12 @@ import (
 	"gorm.io/gorm"
 )
 
+type UserCharacterResponse struct {
+	UserCharacterID string `json:"userCharacterID"`
+	CharacterID     string `json:"characterID"`
+	Name            string `json:"name"`
+}
+
 // Get user characters with specfic user's token
 func (controller *Controller) GetUserCharacters(c *gin.Context) {
 	var user models.User
@@ -36,11 +42,17 @@ func (controller *Controller) GetUserCharacters(c *gin.Context) {
 		offset = -1
 		limit = -1
 	} else {
-		page, _ := strconv.Atoi(pageStr)
+		page, err := strconv.Atoi(pageStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		}
 		if page == 0 {
 			page = 1
 		}
-		limit, _ = strconv.Atoi(limitStr)
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		}
 		switch {
 		case limit > 100:
 			limit = 100
@@ -50,11 +62,20 @@ func (controller *Controller) GetUserCharacters(c *gin.Context) {
 		offset = (page - 1) * limit
 	}
 	// Get all user_characters of certain user from database
-	var userCharactersResponses []models.UserCharacterResponse
-	err = repos.GetUserCharacters(controller.Db, &userCharactersResponses, limit, offset, user.ID)
+	userCharactersResponses := make([]UserCharacterResponse, 0)
+	userCharacters := make([]models.UserCharacter, 0)
+
+	err = repos.GetUserCharacters(controller.Db, &userCharacters, limit, offset, user.ID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
+	}
+	for _, userCharacter := range userCharacters {
+		userCharactersResponses = append(userCharactersResponses, UserCharacterResponse{
+			UserCharacterID: strconv.FormatUint(uint64(userCharacter.ID), 10),
+			CharacterID:     strconv.FormatUint(uint64(userCharacter.CharacterID), 10),
+			Name:            userCharacter.Name,
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{

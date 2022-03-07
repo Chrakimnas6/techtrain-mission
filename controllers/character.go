@@ -8,6 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type CharacterRequest struct {
+	ID   uint    `gorm:"autoIncrement"`
+	Name string  `gorm:"not null" json:"name"`
+	Rank string  `gorm:"not null" json:"rank"`
+	Odds float64 `gorm:"not null" json:"odds"`
+}
+
 // Get all characters in the database
 func (controller *Controller) GetCharacters(c *gin.Context) {
 	var characters []models.Character
@@ -23,7 +30,7 @@ func (controller *Controller) GetCharacters(c *gin.Context) {
 
 // Create a character to the database
 func (controller *Controller) CreateCharacter(c *gin.Context) {
-	var characterRequest models.CharacterRequest
+	var characterRequest CharacterRequest
 	err := c.BindJSON(&characterRequest)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})

@@ -6,9 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// Update possibility
-func UpdatePossibility(db *gorm.DB, gachaCharacterOdds *models.GachaCharacterOdds) (err error) {
-	err = db.Model(&models.GachaCharacterOdds{}).Where("gacha_id = ? AND character_id = ?", gachaCharacterOdds.GachaID, gachaCharacterOdds.CharacterID).Update("odds", gachaCharacterOdds.Odds).Error
+// Update odds
+func UpdateOdds(db *gorm.DB, gachaCharacterOdds *models.GachaCharacterOdds) (err error) {
+	err = db.Model(&models.GachaCharacterOdds{}).
+		Where("gacha_id = ? AND character_id = ?", gachaCharacterOdds.GachaID, gachaCharacterOdds.CharacterID).
+		Update("odds", gachaCharacterOdds.Odds).Error
 	if err != nil {
 		return err
 	}

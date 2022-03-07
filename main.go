@@ -44,7 +44,7 @@ func setupServer() *gin.Engine {
 	// Create new character
 	r.POST("/character/create", controller.CreateCharacter)
 	// Update possibility
-	r.PUT("/gacha/update", controller.UpdatePossibility)
+	r.PUT("/gacha/update", controller.UpdateOdds)
 	// Create new gacha pool
 	r.POST("/gacha/create", controller.CreateGachaPool)
 

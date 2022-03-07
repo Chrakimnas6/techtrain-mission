@@ -81,16 +81,26 @@ func GetAllSpecificCharacters(db *gorm.DB, characters *[]models.Character, chara
 	return nil
 }
 
-// Get join information from characters and characters_odds
-// TODO: add Where gacha_id = ? for selecting the gacha type
-func GetCharactersOddsComb(db *gorm.DB, charactersOddsComb *[]struct {
-	models.GachaCharacterOdds
-	models.Character
-}, gachaID uint) (err error) {
-	err = db.Model(&models.GachaCharacterOdds{}).Select("*").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Where("gacha_character_odds.gacha_id = ?", gachaID).Scan(&charactersOddsComb).Error
+// // Get join information from characters and characters_odds
+// func GetCharactersOddsComb(db *gorm.DB, charactersOddsComb *[]struct {
+// 	models.GachaCharacterOdds
+// 	models.Character
+// }, gachaID uint) (err error) {
+// 	err = db.Model(&models.GachaCharacterOdds{}).Select("*").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Where("gacha_character_odds.gacha_id = ?", gachaID).Scan(&charactersOddsComb).Error
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func GetCharactersOddsComb(db *gorm.DB, gachaCharacterOdds *[]models.GachaCharacterOdds, characters *[]models.Character, gachaID uint) (err error) {
+	err = db.Model(&models.GachaCharacterOdds{}).Select("gacha_character_odds.character_id, gacha_character_odds.odds").Joins("inner join characters on gacha_character_odds.character_id = characters.id").Where("gacha_character_odds.gacha_id = ?", gachaID).Scan(&gachaCharacterOdds).Error
+	if err != nil {
+		return err
+	}
+	err = db.Model(&models.Character{}).Select("characters.id, characters.name, characters.rank").Joins("inner join gacha_character_odds on gacha_character_odds.character_id = characters.id").Where("gacha_character_odds.gacha_id = ?", gachaID).Scan(&characters).Error
 	if err != nil {
 		return err
 	}
 	return nil
-
 }
