@@ -67,10 +67,10 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 			oddsSum += gachaCharacterOdds[i].Odds
 			if num <= oddsSum {
 				userCharacters = append(userCharacters, models.UserCharacter{
-					UserID:      user.ID,
-					CharacterID: characters[i].ID,
-					Name:        characters[i].Name,
-					Rank:        characters[i].Rank,
+					UserID:        user.ID,
+					CharacterID:   characters[i].ID,
+					Name:          characters[i].Name,
+					CharacterRank: characters[i].Rank,
 				})
 				gachaResults = append(gachaResults, GachaResult{
 					CharacterID: strconv.Itoa(int(characters[i].ID)),
@@ -82,6 +82,10 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 	}
 
 	err = repos.CreateUserCharacters(controller.Db, &userCharacters)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"results": gachaResults,

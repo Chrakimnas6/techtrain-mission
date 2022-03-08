@@ -20,7 +20,10 @@ func setupServer() *gin.Engine {
 	r.LoadHTMLGlob("templates/*.html")
 
 	db := db.Init()
-	controller := controllers.New(db)
+	//controller := controllers.New(db)
+	controller := controllers.Controller{
+		Db: db,
+	}
 	corsConfig := cors.DefaultConfig()
 
 	// CORS setting in order to receive from Swagger properly

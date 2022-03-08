@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS bookmarks(
+   id serial PRIMARY KEY,
+   url VARCHAR (50) UNIQUE
+);
