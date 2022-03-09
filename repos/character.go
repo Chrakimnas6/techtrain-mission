@@ -103,7 +103,7 @@ func GetCharactersOddsComb(db *gorm.DB, gachaCharacterOdds *[]models.GachaCharac
 		return err
 	}
 	err = db.Model(&models.Character{}).
-		Select("characters.id, characters.name, characters.rank").
+		Select("characters.id, characters.name, characters.character_rank").
 		Joins("inner join gacha_character_odds on gacha_character_odds.character_id = characters.id").
 		Where("gacha_character_odds.gacha_id = ?", gachaID).
 		Scan(&characters).Error

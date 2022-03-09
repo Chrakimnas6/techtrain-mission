@@ -19,8 +19,8 @@ func setupServer() *gin.Engine {
 	// Showing contents of the database
 	r.LoadHTMLGlob("templates/*.html")
 
+	// Connect to the database
 	db := db.Init()
-	//controller := controllers.New(db)
 	controller := controllers.Controller{
 		Db: db,
 	}

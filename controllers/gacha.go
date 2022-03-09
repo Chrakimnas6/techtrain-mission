@@ -70,7 +70,7 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 					UserID:        user.ID,
 					CharacterID:   characters[i].ID,
 					Name:          characters[i].Name,
-					CharacterRank: characters[i].Rank,
+					CharacterRank: characters[i].CharacterRank,
 				})
 				gachaResults = append(gachaResults, GachaResult{
 					CharacterID: strconv.Itoa(int(characters[i].ID)),

@@ -37,8 +37,8 @@ func (controller *Controller) CreateCharacter(c *gin.Context) {
 		return
 	}
 	character := models.Character{
-		Name: characterRequest.Name,
-		Rank: characterRequest.Rank,
+		Name:          characterRequest.Name,
+		CharacterRank: characterRequest.Rank,
 	}
 
 	err = repos.CreateCharacter(controller.Db, &character)
