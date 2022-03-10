@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -34,6 +35,8 @@ func (controller *Controller) GetUserCharacters(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+	fmt.Println(user.Token)
+	fmt.Println(user.ID)
 	// Pagination
 	pageStr := c.Query("page")
 	limitStr := c.Query("limit")
