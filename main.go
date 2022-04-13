@@ -1,17 +1,49 @@
 package main
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"fmt"
+	"log"
 	"training/controllers"
 	"training/db"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
+	SetupEthereumNetwork()
 	r := setupServer()
 	r.Run()
+}
+
+func SetupEthereumNetwork() {
+	// Connect to the Ethereum network
+	client, err := ethclient.Dial("http://hardhat:8545/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("we have a connection")
+
+	privateKey, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	balance, err := client.BalanceAt(context.Background(), address, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("ETH balance of the Hardhat's local node: %s\n", balance)
 }
 
 func setupServer() *gin.Engine {

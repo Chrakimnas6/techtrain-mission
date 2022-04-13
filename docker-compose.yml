@@ -1,5 +1,17 @@
 version: '3.9'
 services:
+  hardhat:
+    build:
+      context: ./hardhat
+      dockerfile: Dockerfile
+    restart: always
+    command: yarn run dev
+    volumes: 
+      - ./hardhat:/app
+      - /app/node_modules
+      # - ./<PATH_TO_FRONTEND_DIR>/contracts:/app/tmp/contracts
+    ports:
+      - 8545:8545
   go:
     build: 
       context: .
@@ -12,7 +24,8 @@ services:
     ports:
       - 8080:8080
     depends_on:
-      - "db"
+      - db
+      - hardhat
   db:
     image: mysql:8.0
     environment:
