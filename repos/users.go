@@ -33,6 +33,15 @@ func GetUser(db *gorm.DB, user *models.User, token string) (err error) {
 	return nil
 }
 
+// Get user by name
+func GetUserByName(db *gorm.DB, user *models.User, name string) (err error) {
+	err = db.Where("name = ?", name).First(&user).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Update user
 func UpdateUser(db *gorm.DB, user *models.User) (err error) {
 	err = db.Save(&user).Error
