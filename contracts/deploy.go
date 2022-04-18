@@ -5,25 +5,23 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-
 	"training/accounts"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func Deploy(keystoreFileName string) (tokenAddress common.Address, instance *Token) {
-	client, err := ethclient.Dial("http://hardhat:8545/")
-	//nonce, err := client.PendingNonceAt(context.Background(), address)
-	if err != nil {
-		log.Fatal(err)
-	}
+func Deploy(client *ethclient.Client, ks *keystore.KeyStore, keystoreFileName string) (tokenAddress common.Address, instance *Token) {
 
-	ks, account := accounts.ImportKeystore(keystoreFileName, "password")
+	account := accounts.ImportAccount(ks, keystoreFileName, "password")
 
 	ks.Unlock(account, "password")
 	nonce, err := client.PendingNonceAt(context.Background(), account.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Printf("nonce: %d\n", nonce)
 
 	chainID, err := client.NetworkID(context.Background())

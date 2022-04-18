@@ -7,14 +7,14 @@ import (
 	"math/big"
 	"training/accounts"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func FaucetTransfer(adminAddress common.Address) (err error) {
-
-	client, err := ethclient.Dial("http://hardhat:8545/")
+func FaucetTransfer(client *ethclient.Client, adminAddress common.Address) (err error) {
 	if err != nil {
 		return err
 	}
@@ -83,6 +83,91 @@ func TransferETH(privateKeyFrom *ecdsa.PrivateKey, addressFrom common.Address,
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Receive token from admin
+func ReceiveToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Token, keystoreFileName string, addressTo common.Address, amount int) (err error) {
+	account := accounts.ImportAccount(ks, keystoreFileName, "password")
+	ks.Unlock(account, "password")
+
+	nonce, err := client.PendingNonceAt(context.Background(), account.Address)
+	if err != nil {
+		return err
+	}
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainID)
+	if err != nil {
+		return err
+	}
+
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)      // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = gasPrice
+
+	fmt.Printf("Amount: %d\n", amount)
+	transferAmount := big.NewInt(0).Mul(big.NewInt(int64(amount)), big.NewInt(1000000000000000000))
+	fmt.Printf("Transfer amount: %d\n", transferAmount)
+
+	tx, err := instance.Transfer(auth, addressTo, transferAmount)
+	if err != nil {
+		return err
+	}
+	_ = tx
+
+	return nil
+}
+
+func BurnToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Token, keystoreFileName string, amount int) (err error) {
+	account := accounts.ImportAccount(ks, keystoreFileName, "password")
+	ks.Unlock(account, "password")
+
+	nonce, err := client.PendingNonceAt(context.Background(), account.Address)
+	if err != nil {
+		return err
+	}
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainID)
+	if err != nil {
+		return err
+	}
+
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)      // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = gasPrice
+
+	fmt.Printf("Amount: %d\n", amount)
+	burnAmount := big.NewInt(0).Mul(big.NewInt(int64(amount)), big.NewInt(1000000000000000000))
+	fmt.Printf("Transfer amount: %d\n", burnAmount)
+
+	tx, err := instance.Burn(auth, burnAmount)
+	if err != nil {
+		return err
+	}
+	_ = tx
 
 	return nil
 }

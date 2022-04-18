@@ -2,9 +2,13 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
+	"training/accounts"
+	token "training/contracts"
 	"training/models"
 	"training/repos"
 
@@ -21,8 +25,8 @@ type Gacha struct {
 func (controller *Controller) DrawGacha(c *gin.Context) {
 	// Get user with the token from Header
 	var user models.User
-	token := c.GetHeader("x-token")
-	err := repos.GetUser(controller.Db, &user, token)
+	userToken := c.GetHeader("x-token")
+	err := repos.GetUser(controller.Db, &user, userToken)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -40,6 +44,26 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
+	// Get User account
+	userAccount := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	// Get user balance
+	userBalance := token.GetTokenBalance(controller.Instance, userAccount.Address)
+	// Doens't have enough balance
+	if userBalance.Cmp(big.NewInt(int64(gacha.Times))) == -1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error":        "Not enough balance",
+			"user_balance": userBalance.String(),
+		})
+		return
+	}
+	// Consume token
+	err = token.BurnToken(controller.Client, controller.Keystore, controller.Instance, user.Keystore, int(gacha.Times))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	userBalance = token.GetTokenBalance(controller.Instance, userAccount.Address)
+	fmt.Printf("User balance after the gacha: %v\n", userBalance)
 
 	// Get combined information of users
 	type GachaResult struct {

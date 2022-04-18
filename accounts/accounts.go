@@ -1,17 +1,14 @@
 package accounts
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"io/ioutil"
 	"log"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Get account from Hardhat local node
@@ -35,20 +32,18 @@ func deriveAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return address
 }
 
-// Create new keystore
-func CreateKeystore(password string) (ks *keystore.KeyStore, keystoreFileName string, acount accounts.Account) {
-	ks = keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
+// Create new account
+func CreateAccount(ks *keystore.KeyStore, password string) (keystoreFileName string, acount accounts.Account) {
 	account, err := ks.NewAccount(password)
 	if err != nil {
 		log.Fatal(err)
 	}
 	keystoreFileName = account.URL.Path
-	return ks, keystoreFileName, account
+	return keystoreFileName, account
 }
 
-// Import keystore
-func ImportKeystore(keystoreFileName string, password string) (ks *keystore.KeyStore, account accounts.Account) {
-	ks = keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
+// Get account
+func ImportAccount(ks *keystore.KeyStore, keystoreFileName string, password string) (account accounts.Account) {
 	jsonBytes, err := ioutil.ReadFile(keystoreFileName)
 	if err != nil {
 		log.Fatal(err)
@@ -57,19 +52,5 @@ func ImportKeystore(keystoreFileName string, password string) (ks *keystore.KeyS
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-	//address = account.Address
-	return ks, account
-}
-
-// Get address' balance
-func GetBalance(address common.Address) (balance *big.Int) {
-	client, err := ethclient.Dial("http://hardhat:8545/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	balance, err = client.BalanceAt(context.Background(), address, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return balance
+	return account
 }

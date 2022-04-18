@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"training/controllers"
 	"training/db"
@@ -13,38 +12,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-var KS *keystore.KeyStore
-
 func main() {
-	SetupEthereumNetwork()
 	r := setupServer()
 	r.Run()
-}
-func init() {
-	KS = keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
-}
-
-//TODO: Set global client and ks
-func SetupEthereumNetwork() {
-	// Connect to the Ethereum network
-	client, err := ethclient.Dial("http://hardhat:8545/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("we have a connection")
-	_ = client
-
-	// Test
-	// ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
-	// password := "secret"
-
-	// account, err := ks.NewAccount(password)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// fmt.Println(account.Address.Hex())
-
 }
 
 func setupServer() *gin.Engine {
@@ -54,12 +24,24 @@ func setupServer() *gin.Engine {
 
 	// Connect to the database
 	db := db.Init()
-	controller := controllers.Controller{
-		Db: db,
-	}
-	corsConfig := cors.DefaultConfig()
 
-	// CORS setting in order to receive from Swagger properly
+	// Set up Ethereum network
+	client, err := ethclient.Dial("http://hardhat:8545/")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load Keystore
+	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
+
+	controller := controllers.Controller{
+		Db:       db,
+		Client:   client,
+		Keystore: ks,
+	}
+
+	// Set up CORS in order to receive from Swagger properly
+	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"*"}
 	corsConfig.AllowHeaders = []string{"*"}
 	corsConfig.AllowCredentials = true
@@ -70,7 +52,7 @@ func setupServer() *gin.Engine {
 	r.POST("/user/create", controller.CreateUser)
 	r.GET("/user/get", controller.GetUser)
 	r.PUT("/user/update", controller.UpdateUser)
-
+	r.POST("/user/receive", controller.ReceiveToken)
 	// APIs - gacha
 	r.POST("/gacha/draw", controller.DrawGacha)
 	// APIs - character

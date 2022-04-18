@@ -37,13 +37,20 @@ func (controller *Controller) CreateUser(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
-	token := uuid.New()
-	user.Token = token.String()
+	userToken := uuid.New()
+	user.Token = userToken.String()
 
 	// Create keystore, at now just use default password
-	ks, keystoreFileName, account := accounts.CreateKeystore("password")
-	_, _ = ks, account
+	keystoreFileName, account := accounts.CreateAccount(controller.Keystore, "password")
+	_ = account
 	user.Keystore = keystoreFileName
+
+	// Transfer ETH to the user
+	err = token.FaucetTransfer(controller.Client, account.Address)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	err = repos.CreateUser(controller.Db, &user)
 	if err != nil {
@@ -129,8 +136,8 @@ func (controller *Controller) GetAll(c *gin.Context) {
 // Get user's balance
 func (controller *Controller) GetUserBalance(c *gin.Context) {
 	var user models.User
-	token := c.GetHeader("x-token")
-	err := repos.GetUser(controller.Db, &user, token)
+	userToken := c.GetHeader("x-token")
+	err := repos.GetUser(controller.Db, &user, userToken)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
@@ -140,9 +147,8 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 		return
 	}
 
-	ks, account := accounts.ImportKeystore(user.Keystore, "password")
-	_ = ks
-	balance := accounts.GetBalance(account.Address)
+	account := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	balance := token.GetETHBalance(controller.Client, account.Address)
 	c.JSON(http.StatusOK, gin.H{
 		"balance": balance,
 	})
@@ -151,11 +157,6 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 // Create admin user
 func (controller *Controller) CreateAdminUser(c *gin.Context) {
 	var user models.User
-	//err := c.BindJSON(&user)
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
-	// 	return
-	// }
 
 	// Give the name with admin
 	user.Name = "admin"
@@ -171,8 +172,7 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 		return
 	}
 	// Create keystore, at now just use default password
-	ks, keystoreFileName, account := accounts.CreateKeystore("password")
-	_ = ks
+	keystoreFileName, account := accounts.CreateAccount(controller.Keystore, "password")
 	user.Keystore = keystoreFileName
 	address := account.Address
 
@@ -182,17 +182,65 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 		return
 	}
 	// Transfer ETH to the admin
-	err = token.FaucetTransfer(address)
+	err = token.FaucetTransfer(controller.Client, address)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 	// Deploy the contract
-	tokenAddress, instance := token.Deploy(keystoreFileName)
+	tokenAddress, instance := token.Deploy(controller.Client, controller.Keystore, keystoreFileName)
+	controller.Instance = instance
 	_ = tokenAddress
 	token.CheckInformation(instance, address)
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": user.Token,
+	})
+}
+
+type AmountRequest struct {
+	Amount int `json:"amount"`
+}
+
+// Receive token from the admin
+func (controller *Controller) ReceiveToken(c *gin.Context) {
+	var user models.User
+	userToken := c.GetHeader("x-token")
+	err := repos.GetUser(controller.Db, &user, userToken)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	// Get the amount
+	var amountRequest AmountRequest
+	err = c.BindJSON(&amountRequest)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+	// Get user account
+	userAccount := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+
+	// Get admin's information
+	adminUser := models.User{}
+	err = repos.GetUserByName(controller.Db, &adminUser, "admin")
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	err = token.ReceiveToken(controller.Client, controller.Keystore, controller.Instance, adminUser.Keystore, userAccount.Address, amountRequest.Amount)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	userBalance := token.GetTokenBalance(controller.Instance, userAccount.Address)
+
+	c.JSON(http.StatusOK, gin.H{
+		"balance": userBalance,
 	})
 }
