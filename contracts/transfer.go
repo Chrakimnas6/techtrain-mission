@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// Receive ETH from Hardhat's address
 func FaucetTransfer(client *ethclient.Client, adminAddress common.Address) (err error) {
 	if err != nil {
 		return err
@@ -39,7 +40,7 @@ func FaucetTransfer(client *ethclient.Client, adminAddress common.Address) (err 
 	if err != nil {
 		return err
 	}
-	//
+
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKeyFrom)
 	if err != nil {
 		return err
@@ -130,6 +131,7 @@ func ReceiveToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Tok
 	return nil
 }
 
+// Consume token when executing the gacha
 func BurnToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Token, keystoreFileName string, amount int) (err error) {
 	account := accounts.ImportAccount(ks, keystoreFileName, "password")
 	ks.Unlock(account, "password")

@@ -67,7 +67,7 @@ func setupServer() *gin.Engine {
 	r.POST("/gacha/create", controller.CreateGachaPool)
 	// Create new admin address
 	r.POST("/admin/create", controller.CreateAdminUser)
-	// Get user'balance
+	// Get user'ETH balance
 	r.GET("/user/balance", controller.GetUserBalance)
 
 	return r
