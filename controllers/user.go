@@ -148,9 +148,11 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 	}
 
 	account := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
-	balance := token.GetETHBalance(controller.Client, account.Address)
+	etherBalance := token.GetETHBalance(controller.Client, account.Address)
+	tokenBalance := token.GetTokenBalance(controller.Instance, account.Address)
 	c.JSON(http.StatusOK, gin.H{
-		"balance": balance,
+		"ether balance": etherBalance,
+		"token balance": tokenBalance,
 	})
 }
 
@@ -171,7 +173,7 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 		})
 		return
 	}
-	// Create keystore, at now just use default password
+	// Create account, at now just use default password
 	keystoreFileName, account := accounts.CreateAccount(controller.Keystore, "password")
 	user.Keystore = keystoreFileName
 	address := account.Address
@@ -202,8 +204,8 @@ type AmountRequest struct {
 	Amount int `json:"amount"`
 }
 
-// Receive token from the admin
-func (controller *Controller) ReceiveToken(c *gin.Context) {
+// Transfer token to user
+func (controller *Controller) TransferToken(c *gin.Context) {
 	var user models.User
 	userToken := c.GetHeader("x-token")
 	err := repos.GetUser(controller.Db, &user, userToken)

@@ -52,11 +52,12 @@ func setupServer() *gin.Engine {
 	r.POST("/user/create", controller.CreateUser)
 	r.GET("/user/get", controller.GetUser)
 	r.PUT("/user/update", controller.UpdateUser)
-	r.POST("/user/receive", controller.ReceiveToken)
 	// APIs - gacha
 	r.POST("/gacha/draw", controller.DrawGacha)
 	// APIs - character
 	r.GET("/character/list", controller.GetUserCharacters)
+	// APIS - token
+	r.POST("/token/transfer", controller.TransferToken)
 
 	// Internal Use
 	// Create new character
@@ -66,8 +67,8 @@ func setupServer() *gin.Engine {
 	// Create new gacha pool
 	r.POST("/gacha/create", controller.CreateGachaPool)
 	// Create new admin address
-	r.POST("/admin/create", controller.CreateAdminUser)
-	// Get user'ETH balance
+	r.POST("/user/admin/create", controller.CreateAdminUser)
+	// Get user's ETH and token balance
 	r.GET("/user/balance", controller.GetUserBalance)
 
 	return r
