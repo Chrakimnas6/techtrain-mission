@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"training/controllers"
 	"training/db"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -26,10 +29,17 @@ func setupServer() *gin.Engine {
 	db := db.Init()
 
 	// Set up Ethereum network
-	client, err := ethclient.Dial("http://hardhat:8545/")
+	client, err := ethclient.Dial("https://eth-ropsten.alchemyapi.io/v2/xxx")
 	if err != nil {
 		log.Fatal(err)
 	}
+	account := common.HexToAddress("0x1c9E13D8e2ae2EdC45D22F78D153CeF5F882a46A")
+	balance, err := client.BalanceAt(context.Background(), account, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(balance)
 
 	// Load Keystore
 	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
@@ -70,6 +80,12 @@ func setupServer() *gin.Engine {
 	r.POST("/user/admin/create", controller.CreateAdminUser)
 	// Get user's ETH and token balance
 	r.GET("/user/balance", controller.GetUserBalance)
+	// Deploy token
+	r.POST("/token/deploy", controller.DeployToken)
+	// Mint extra token
+	r.POST("/token/mint", controller.MintToken)
+	// Check token
+	r.GET("/token/check", controller.CheckToken)
 
 	return r
 }

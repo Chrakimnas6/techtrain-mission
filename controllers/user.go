@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"math/big"
 
 	"training/accounts"
 	token "training/contracts"
@@ -126,7 +127,7 @@ func (controller *Controller) GetAll(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	c.HTML(200, "index.html", gin.H{
+	c.HTML(http.StatusOK, "index.html", gin.H{
 		"users":                users,
 		"characters":           characters,
 		"gacha_character_odds": characterOdds,
@@ -148,8 +149,13 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 	}
 
 	account := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
-	etherBalance := token.GetETHBalance(controller.Client, account.Address)
-	tokenBalance := token.GetTokenBalance(controller.Instance, account.Address)
+	var etherBalance, tokenBalance *big.Int
+	etherBalance = token.GetETHBalance(controller.Client, account.Address)
+	if controller.Instance == nil {
+		tokenBalance = big.NewInt(0)
+	} else {
+		tokenBalance = token.GetTokenBalance(controller.Instance, account.Address)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"ether balance": etherBalance,
 		"token balance": tokenBalance,
@@ -173,76 +179,30 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 		})
 		return
 	}
-	// Create account, at now just use default password
-	keystoreFileName, account := accounts.CreateAccount(controller.Keystore, "password")
-	user.Keystore = keystoreFileName
-	address := account.Address
+
+	// Use the existing account as the admin and store it in the path
+	account := accounts.StoreKey(controller.Keystore, "password")
+	user.Keystore = account.URL.Path
 
 	err = repos.CreateUser(controller.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Transfer ETH to the admin
-	err = token.FaucetTransfer(controller.Client, address)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	// Deploy the contract
-	tokenAddress, instance := token.Deploy(controller.Client, controller.Keystore, keystoreFileName)
-	controller.Instance = instance
-	_ = tokenAddress
-	token.CheckInformation(instance, address)
+	// // Transfer ETH to the admin
+	// err = token.FaucetTransfer(controller.Client, address)
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+	// 	return
+	// }
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": user.Token,
-	})
-}
+	// // Deploy the contract
+	// tokenAddress, instance := token.Deploy(controller.Client, controller.Keystore, keystoreFileName)
+	// controller.Instance = instance
+	// _ = tokenAddress
+	// token.CheckInformation(instance, address)
 
-type AmountRequest struct {
-	Amount int `json:"amount"`
-}
-
-// Transfer token to user
-func (controller *Controller) TransferToken(c *gin.Context) {
-	var user models.User
-	userToken := c.GetHeader("x-token")
-	err := repos.GetUser(controller.Db, &user, userToken)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.AbortWithStatus(http.StatusNotFound)
-			return
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	// Get the amount
-	var amountRequest AmountRequest
-	err = c.BindJSON(&amountRequest)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-	// Get user account
-	userAccount := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
-
-	// Get admin's information
-	adminUser := models.User{}
-	err = repos.GetUserByName(controller.Db, &adminUser, "admin")
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-
-	err = token.ReceiveToken(controller.Client, controller.Keystore, controller.Instance, adminUser.Keystore, userAccount.Address, amountRequest.Amount)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	userBalance := token.GetTokenBalance(controller.Instance, userAccount.Address)
-
-	c.JSON(http.StatusOK, gin.H{
-		"balance": userBalance,
-	})
+	// c.JSON(http.StatusOK, gin.H{
+	// 	"token": user.Token,
+	// })
 }

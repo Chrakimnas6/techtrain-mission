@@ -49,8 +49,19 @@ func ImportAccount(ks *keystore.KeyStore, keystoreFileName string, password stri
 		log.Fatal(err)
 	}
 	account, err = ks.Import(jsonBytes, password, password)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	_ = err
+	return account
+}
+
+// Stores existing admin's key into the key directory
+func StoreKey(ks *keystore.KeyStore, password string) (account accounts.Account) {
+	privateKey, err := crypto.HexToECDSA("*****")
+	if err != nil {
+		log.Fatal(err)
+	}
+	account, err = ks.ImportECDSA(privateKey, "password")
+	if err != nil {
+		log.Fatal(err)
+	}
 	return account
 }

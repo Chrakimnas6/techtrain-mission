@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func CheckInformation(instance *Token, address common.Address) {
+func CheckInformation(instance *Token) {
 	name, err := instance.Name(&bind.CallOpts{})
 	if err != nil {
 		log.Fatal(err)
@@ -26,16 +26,10 @@ func CheckInformation(instance *Token, address common.Address) {
 		log.Fatal(err)
 	}
 
-	balanceA, err := instance.BalanceOf(&bind.CallOpts{}, address)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	fmt.Printf("Token's name: %s\n", name)
 	fmt.Printf("Token's symbol: %s\n", symbol)
 	fmt.Printf("Token's supply: %s\n", supply)
 
-	fmt.Printf("Admin's Balance is: %s\n", new(big.Int).Div(balanceA, big.NewInt(1000000000000000000)))
 }
 
 // Get address' ETH balance
