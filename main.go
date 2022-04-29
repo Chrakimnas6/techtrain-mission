@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"training/controllers"
 	"training/db"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -33,13 +30,6 @@ func setupServer() *gin.Engine {
 	if err != nil {
 		log.Fatal(err)
 	}
-	account := common.HexToAddress("0x1c9E13D8e2ae2EdC45D22F78D153CeF5F882a46A")
-	balance, err := client.BalanceAt(context.Background(), account, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(balance)
 
 	// Load Keystore
 	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
