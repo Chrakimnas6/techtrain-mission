@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"training/accounts"
@@ -41,18 +42,43 @@ func (controller *Controller) CreateUser(c *gin.Context) {
 	userToken := uuid.New()
 	user.Token = userToken.String()
 
-	// Create keystore, at now just use default password
-	keystoreFileName, account := accounts.CreateAccount(controller.Keystore, "password")
+	// Create keystore, as for now just use default password
+	fmt.Println("Creating keystore...")
+	keystoreFileName, account, err := accounts.CreateAccount(controller.Keystore, "password")
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 	_ = account
 	user.Keystore = keystoreFileName
 
-	// Transfer ETH to the user
-	err = token.FaucetTransfer(controller.Client, account.Address)
+	// Transfer ETH from admin to the user
+	// Get admin's information
+	fmt.Println("Getting admin's information...")
+	adminUser := models.User{}
+	err = repos.GetUserByName(controller.Db, &adminUser, "admin")
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	// Transfer 0.1 ETH from admin's address to user's address
+	fmt.Println("Transferring ETH...")
+	tx, err := token.TransferETH(controller.Client, controller.Keystore, adminUser.Keystore, account.Address, 1)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
+	// Wait transaction to be mined
+	fmt.Println("Waiting for transaction to be mined...")
+	err = token.CheckTransaction(tx)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	// Create the user
+	fmt.Println("Creating user...")
 	err = repos.CreateUser(controller.Db, &user)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
@@ -136,6 +162,7 @@ func (controller *Controller) GetAll(c *gin.Context) {
 
 // Get user's balance
 func (controller *Controller) GetUserBalance(c *gin.Context) {
+	fmt.Println("Getting user's from the database...")
 	var user models.User
 	userToken := c.GetHeader("x-token")
 	err := repos.GetUser(controller.Db, &user, userToken)
@@ -148,13 +175,27 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 		return
 	}
 
-	account := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	account, err := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	_ = err
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+	// 	return
+	// }
 	var etherBalance, tokenBalance *big.Int
-	etherBalance = token.GetETHBalance(controller.Client, account.Address)
+	etherBalance, err = token.GetETHBalance(controller.Client, account.Address)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
 	if controller.Instance == nil {
 		tokenBalance = big.NewInt(0)
 	} else {
-		tokenBalance = token.GetTokenBalance(controller.Instance, account.Address)
+		tokenBalance, err = token.GetTokenBalance(controller.Instance, account.Address)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"ether balance": etherBalance,
@@ -181,7 +222,11 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 	}
 
 	// Use the existing account as the admin and store it in the path
-	account := accounts.StoreKey(controller.Keystore, "password")
+	account, err := accounts.StoreKey(controller.Keystore, "password")
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 	user.Keystore = account.URL.Path
 
 	err = repos.CreateUser(controller.Db, &user)
@@ -189,20 +234,4 @@ func (controller *Controller) CreateAdminUser(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// // Transfer ETH to the admin
-	// err = token.FaucetTransfer(controller.Client, address)
-	// if err != nil {
-	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-	// 	return
-	// }
-
-	// // Deploy the contract
-	// tokenAddress, instance := token.Deploy(controller.Client, controller.Keystore, keystoreFileName)
-	// controller.Instance = instance
-	// _ = tokenAddress
-	// token.CheckInformation(instance, address)
-
-	// c.JSON(http.StatusOK, gin.H{
-	// 	"token": user.Token,
-	// })
 }

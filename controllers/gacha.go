@@ -12,6 +12,7 @@ import (
 	"training/models"
 	"training/repos"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -45,9 +46,37 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		return
 	}
 	// Get User account
-	userAccount := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	userAccount, err := accounts.ImportAccount(controller.Keystore, user.Keystore, "password")
+	_ = err
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+	// 	return
+	// }
+
 	// Get user balance
-	userBalance := token.GetTokenBalance(controller.Instance, userAccount.Address)
+	// If the instance is nil, get the instance first
+	if controller.Instance == nil {
+		tkn := models.Token{}
+		err := repos.GetToken(controller.Db, &tkn, 2)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		// address := common.HexToAddress("0xD1e685605C02f812D4200A16D6844E354ddCDD3C")
+		address := common.HexToAddress(tkn.Address)
+		instance, err := token.NewToken(address, controller.Client)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		controller.Instance = instance
+	}
+
+	userBalance, err := token.GetTokenBalance(controller.Instance, userAccount.Address)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
 	// Doens't have enough balance
 	if userBalance.Cmp(big.NewInt(int64(gacha.Times))) == -1 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
@@ -57,12 +86,23 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		return
 	}
 	// Consume token
-	err = token.BurnToken(controller.Client, controller.Keystore, controller.Instance, user.Keystore, int(gacha.Times))
+	tx, err := token.BurnToken(controller.Client, controller.Keystore, controller.Instance, user.Keystore, int(gacha.Times))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	userBalance = token.GetTokenBalance(controller.Instance, userAccount.Address)
+	// Wait transaction to be mined
+	err = token.CheckTransaction(tx)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	userBalance, err = token.GetTokenBalance(controller.Instance, userAccount.Address)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 	fmt.Printf("User balance after the gacha: %v\n", userBalance)
 
 	// Get combined information of users
@@ -112,7 +152,8 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"results": gachaResults,
+		"user balance now": userBalance,
+		"results":          gachaResults,
 	})
 
 }
