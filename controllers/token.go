@@ -66,7 +66,7 @@ func (controller *Controller) TransferToken(c *gin.Context) {
 	// If the instance is nil, get the instance first
 	if controller.Instance == nil {
 		tkn := models.Token{}
-		err := repos.GetToken(controller.Db, &tkn, 2)
+		err := repos.GetToken(controller.Db, &tkn, "MTK")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
@@ -175,7 +175,7 @@ func (controller *Controller) MintToken(c *gin.Context) {
 	// If the instance is nil, get the instance first
 	if controller.Instance == nil {
 		tkn := models.Token{}
-		err := repos.GetToken(controller.Db, &tkn, 2)
+		err := repos.GetToken(controller.Db, &tkn, "MTK")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return

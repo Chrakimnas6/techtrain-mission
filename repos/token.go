@@ -14,8 +14,8 @@ func SaveToken(db *gorm.DB, token *models.Token) (err error) {
 	return nil
 }
 
-func GetToken(db *gorm.DB, token *models.Token, id uint) (err error) {
-	err = db.Where("id = ?", id).First(&token).Error
+func GetToken(db *gorm.DB, token *models.Token, symbol string) (err error) {
+	err = db.Where("symbol = ?", symbol).Last(&token).Error
 	if err != nil {
 		return err
 	}

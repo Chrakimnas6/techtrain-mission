@@ -57,7 +57,7 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 	// If the instance is nil, get the instance first
 	if controller.Instance == nil {
 		tkn := models.Token{}
-		err := repos.GetToken(controller.Db, &tkn, 2)
+		err := repos.GetToken(controller.Db, &tkn, "MTK")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
@@ -73,6 +73,7 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 	}
 
 	userBalance, err := token.GetTokenBalance(controller.Instance, userAccount.Address)
+	userBalance = new(big.Int).Div(userBalance, big.NewInt(1000000000000000000))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
 		return

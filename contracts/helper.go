@@ -49,13 +49,13 @@ func GetTokenBalance(instance *Token, address common.Address) (balance *big.Int,
 	if err != nil {
 		return nil, err
 	}
-	return new(big.Int).Div(balance, big.NewInt(1000000000000000000)), nil
+	return balance, nil
 }
 
+// Check if the transaction is mined
 func CheckTransaction(txHash *types.Transaction) (err error) {
 	response, err := http.Get("http://crypto-tool:8888/transaction/confirm?txHex=" + txHash.Hash().Hex())
 	if err != nil {
-		fmt.Println("We are fucked up")
 		return err
 	}
 	defer response.Body.Close()

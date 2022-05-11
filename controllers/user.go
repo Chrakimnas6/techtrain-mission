@@ -12,6 +12,7 @@ import (
 
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -189,13 +190,24 @@ func (controller *Controller) GetUserBalance(c *gin.Context) {
 	}
 
 	if controller.Instance == nil {
-		tokenBalance = big.NewInt(0)
-	} else {
-		tokenBalance, err = token.GetTokenBalance(controller.Instance, account.Address)
+		tkn := models.Token{}
+		err := repos.GetToken(controller.Db, &tkn, "MTK")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 			return
 		}
+		address := common.HexToAddress(tkn.Address)
+		instance, err := token.NewToken(address, controller.Client)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		controller.Instance = instance
+	}
+	tokenBalance, err = token.GetTokenBalance(controller.Instance, account.Address)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"ether balance": etherBalance,

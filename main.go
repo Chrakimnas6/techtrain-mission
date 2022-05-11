@@ -26,7 +26,7 @@ func setupServer() *gin.Engine {
 	db := db.Init()
 
 	// Set up Ethereum network
-	client, err := ethclient.Dial("")
+	client, err := ethclient.Dial("***")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -19,7 +19,6 @@ func CheckIfInBlockchain(client *ethclient.Client, txHex string) (err error) {
 			tx, isPending, err := client.TransactionByHash(context.Background(), txHash)
 			_ = tx
 			if err != nil {
-				fmt.Println("This is when err != nil")
 				return err
 			}
 			if !isPending {
@@ -27,7 +26,6 @@ func CheckIfInBlockchain(client *ethclient.Client, txHex string) (err error) {
 				return nil
 			}
 		case <-quit:
-			fmt.Println("This is case <- quit")
 			ticker.Stop()
 			return err
 		}
