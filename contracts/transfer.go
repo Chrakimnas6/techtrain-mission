@@ -71,8 +71,8 @@ func TransferETH(client *ethclient.Client, ks *keystore.KeyStore, keystoreFileNa
 		return nil, err
 	}
 	fmt.Printf("Amount: %d\n", amount)
-	// multiply by 10 * 17
-	transferAmount := big.NewInt(0).Mul(big.NewInt(int64(amount)), big.NewInt(100000000000000000))
+	// multiply by 10 * 16
+	transferAmount := big.NewInt(0).Mul(big.NewInt(int64(amount)), big.NewInt(10000000000000000))
 	fmt.Printf("Transfer amount: %d\n", transferAmount)
 
 	tx = types.NewTransaction(nonce, addressTo, transferAmount, gasLimit, gasPrice, nil)
@@ -91,7 +91,6 @@ func TransferETH(client *ethclient.Client, ks *keystore.KeyStore, keystoreFileNa
 	if err != nil {
 		return nil, err
 	}
-
 	return signedTx, nil
 }
 
@@ -137,7 +136,6 @@ func TransferToken(client *ethclient.Client, ks *keystore.KeyStore, instance *To
 	if err != nil {
 		return nil, err
 	}
-
 	return tx, nil
 }
 
@@ -183,7 +181,6 @@ func BurnToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Token,
 	if err != nil {
 		return nil, err
 	}
-
 	return tx, nil
 }
 
@@ -226,5 +223,8 @@ func MintToken(client *ethclient.Client, ks *keystore.KeyStore, instance *Token,
 	fmt.Printf("Mint amount: %d\n", mintAmount)
 
 	tx, err = instance.Mint(auth, account.Address, mintAmount)
+	if err != nil {
+		return nil, err
+	}
 	return tx, err
 }

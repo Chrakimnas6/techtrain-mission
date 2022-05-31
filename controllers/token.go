@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 	"training/accounts"
 	token "training/contracts"
 	"training/models"
@@ -83,27 +84,50 @@ func (controller *Controller) TransferToken(c *gin.Context) {
 
 	fmt.Println("Transferring token...")
 	tx, err := token.TransferToken(controller.Client, controller.Keystore, controller.Instance, adminUser.Keystore, userAccount.Address, amountRequest.Amount)
+	err = token.TrackTransaction(tx)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Wait transaction to be mined
-	fmt.Println("Waiting for transaction to be mined...")
-	err = token.CheckTransaction(tx)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	// Get user balance
-	fmt.Println("Getting user's balance...")
-	userBalance, err := token.GetTokenBalance(controller.Instance, userAccount.Address)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+	fmt.Println("Sent transaction to the tracker...")
+	// Use goroutine to wait for the transaction to be mined
+	go func() {
+		// Waiting the status in the database to be changed
+		var transaction models.Transaction
+		ticker := time.NewTicker(time.Second)
+		quit := make(chan struct{})
+	loop:
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("Checking the status...")
+				err = repos.CheckTransactionIsConfirmed(controller.Db, &transaction, tx.Hash().Hex())
+				if err == nil {
+					break loop
+				}
+			case <-quit:
+				ticker.Stop()
+				break loop
+			}
+		}
+		fmt.Println("Transaction is confirmed...")
+
+		// Get user balance
+		fmt.Println("Getting user's balance...")
+		userBalance, err := token.GetTokenBalance(controller.Instance, userAccount.Address)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		// c.JSON(http.StatusOK, gin.H{
+		// 	"balance": userBalance,
+		// })
+		fmt.Println("User's balance is: ", userBalance)
+	}()
 
 	c.JSON(http.StatusOK, gin.H{
-		"balance": userBalance,
+		"message": "Transaction has been sent to the tracker. Can check status at transaction table in database",
+		"tx":      tx.Hash().Hex(),
 	})
 }
 
@@ -121,35 +145,56 @@ func (controller *Controller) DeployToken(c *gin.Context) {
 	// Deploy token
 	fmt.Println("Deploying token...")
 	tx, tokenAddress, instance, err := token.Deploy(controller.Client, controller.Keystore, adminUser.Keystore)
+	err = token.TrackTransaction(tx)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Wait transaction to be mined
-	fmt.Println("Waiting for transaction to be mined...")
-	err = token.CheckTransaction(tx)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+	fmt.Println("Sent transaction to the tracker...")
+	// Use goroutine to wait for the transaction to be mined
+	go func() {
+		// Waiting the status in the database to be changed
+		var transaction models.Transaction
+		ticker := time.NewTicker(time.Second)
+		quit := make(chan struct{})
+	loop:
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("Checking the status...")
+				err = repos.CheckTransactionIsConfirmed(controller.Db, &transaction, tx.Hash().Hex())
+				if err == nil {
+					break loop
+				}
+			case <-quit:
+				ticker.Stop()
+				break loop
+			}
+		}
+		fmt.Println("Transaction is confirmed...")
 
-	// Save token information to the database
-	tkn := models.Token{
-		Address: tokenAddress.Hex(),
-		Symbol:  "MTK",
-	}
-	fmt.Println("Saving token information to the database...")
-	err = repos.SaveToken(controller.Db, &tkn)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	// Set instance
-	controller.Instance = instance
+		// Save token information to the database
+		tkn := models.Token{
+			Address: tokenAddress.Hex(),
+			Symbol:  "MTK",
+		}
+		fmt.Println("Saving token information to the database...")
+		err = repos.SaveToken(controller.Db, &tkn)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		// Set instance
+		controller.Instance = instance
+
+		fmt.Println("symbol: ", tkn.Symbol)
+		fmt.Println("address: ", tkn.Address)
+
+	}()
 
 	c.JSON(http.StatusOK, gin.H{
-		"symbol":  tkn.Symbol,
-		"address": tkn.Address,
+		"message": "Transaction has been sent to the tracker. Can check status at transaction table in database",
+		"tx":      tx.Hash().Hex(),
 	})
 
 }
@@ -192,16 +237,33 @@ func (controller *Controller) MintToken(c *gin.Context) {
 
 	// Mint token
 	tx, err := token.MintToken(controller.Client, controller.Keystore, controller.Instance, adminUser.Keystore, amountRequest.Amount)
+	err = token.TrackTransaction(tx)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Wait transaction to be mined
-	err = token.CheckTransaction(tx)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+	// Use goroutine to wait for the transaction to be mined
+	go func() {
+		// Waiting the status in the database to be changed
+		var transaction models.Transaction
+		ticker := time.NewTicker(time.Second)
+		quit := make(chan struct{})
+	loop:
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("Checking the status...")
+				err = repos.CheckTransactionIsConfirmed(controller.Db, &transaction, tx.Hash().Hex())
+				if err == nil {
+					break loop
+				}
+			case <-quit:
+				ticker.Stop()
+				break loop
+			}
+		}
+		fmt.Println("Transaction is confirmed...")
+	}()
 
 	c.JSON(http.StatusOK, gin.H{
 		"Minted Amount": amountRequest.Amount,

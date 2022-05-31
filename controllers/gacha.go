@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 	"training/accounts"
 	token "training/contracts"
 	"training/models"
@@ -87,74 +88,103 @@ func (controller *Controller) DrawGacha(c *gin.Context) {
 		return
 	}
 	// Consume token
+	fmt.Println("consuming token")
 	tx, err := token.BurnToken(controller.Client, controller.Keystore, controller.Instance, user.Keystore, int(gacha.Times))
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Wait transaction to be mined
-	err = token.CheckTransaction(tx)
+
+	// Track the transaction
+	err = token.TrackTransaction(tx)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-
-	userBalance, err = token.GetTokenBalance(controller.Instance, userAccount.Address)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-	fmt.Printf("User balance after the gacha: %v\n", userBalance)
-
+	fmt.Println("Sent transaction to the tracker...")
 	// Get combined information of users
 	type GachaResult struct {
 		CharacterID string `json:"characterID"`
 		Name        string `json:"name"`
 	}
-
-	var gachaCharacterOdds []models.GachaCharacterOdds
-	var characters []models.Character
-
-	err = repos.GetCharactersOddsComb(controller.Db, &gachaCharacterOdds, &characters, gacha.ID)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
-
 	gachaResults := make([]GachaResult, 0)
-	userCharacters := make([]models.UserCharacter, 0)
 
-	// Suppose all cards' possibilities sum up to 1 in a certain type of gacha pool
-	for i := 0; i < int(gacha.Times); i++ {
-		num := rand.Float64()
-		oddsSum := 0.0
-		for i := range gachaCharacterOdds {
-			oddsSum += gachaCharacterOdds[i].Odds
-			if num <= oddsSum {
-				userCharacters = append(userCharacters, models.UserCharacter{
-					UserID:        user.ID,
-					CharacterID:   characters[i].ID,
-					Name:          characters[i].Name,
-					CharacterRank: characters[i].CharacterRank,
-				})
-				gachaResults = append(gachaResults, GachaResult{
-					CharacterID: strconv.Itoa(int(characters[i].ID)),
-					Name:        characters[i].Name,
-				})
-				break
+	// Use goroutine to wait for the transaction to be mined
+	go func() {
+		// Waiting the status in the database to be changed
+		var transaction models.Transaction
+		ticker := time.NewTicker(time.Second)
+		quit := make(chan struct{})
+	loop:
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("Checking the status...")
+				err = repos.CheckTransactionIsConfirmed(controller.Db, &transaction, tx.Hash().Hex())
+				if err == nil {
+					break loop
+				}
+			case <-quit:
+				ticker.Stop()
+				break loop
 			}
 		}
-	}
+		fmt.Println("Transaction is confirmed...")
 
-	err = repos.CreateUserCharacters(controller.Db, &userCharacters)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+		// Check balance
+		userBalance, err = token.GetTokenBalance(controller.Instance, userAccount.Address)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		fmt.Printf("User balance after the gacha: %v\n", userBalance)
 
+		// Gacha
+		var gachaCharacterOdds []models.GachaCharacterOdds
+		var characters []models.Character
+
+		err = repos.GetCharactersOddsComb(controller.Db, &gachaCharacterOdds, &characters, gacha.ID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+
+		userCharacters := make([]models.UserCharacter, 0)
+
+		// Suppose all cards' possibilities sum up to 1 in a certain type of gacha pool
+		for i := 0; i < int(gacha.Times); i++ {
+			num := rand.Float64()
+			oddsSum := 0.0
+			for i := range gachaCharacterOdds {
+				oddsSum += gachaCharacterOdds[i].Odds
+				if num <= oddsSum {
+					userCharacters = append(userCharacters, models.UserCharacter{
+						UserID:        user.ID,
+						CharacterID:   characters[i].ID,
+						Name:          characters[i].Name,
+						CharacterRank: characters[i].CharacterRank,
+					})
+					gachaResults = append(gachaResults, GachaResult{
+						CharacterID: strconv.Itoa(int(characters[i].ID)),
+						Name:        characters[i].Name,
+					})
+					break
+				}
+			}
+		}
+
+		err = repos.CreateUserCharacters(controller.Db, &userCharacters)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		fmt.Println("Gacha is done...")
+	}()
+
+	// Make response right after the transaction has been sent to ther tracker.
 	c.JSON(http.StatusOK, gin.H{
-		"user balance now": userBalance,
-		"results":          gachaResults,
+		"message": "Transaction has been sent to the tracker. Can check status at transaction table in database",
+		"tx":      tx.Hash().Hex(),
 	})
 
 }

@@ -52,8 +52,8 @@ func GetTokenBalance(instance *Token, address common.Address) (balance *big.Int,
 	return balance, nil
 }
 
-// Check if the transaction is mined
-func CheckTransaction(txHash *types.Transaction) (err error) {
+// Track the transaction
+func TrackTransaction(txHash *types.Transaction) (err error) {
 	response, err := http.Get("http://crypto-tool:8888/transaction/confirm?txHex=" + txHash.Hash().Hex())
 	if err != nil {
 		return err
@@ -62,6 +62,6 @@ func CheckTransaction(txHash *types.Transaction) (err error) {
 	if response.StatusCode == 200 {
 		return nil
 	} else {
-		return fmt.Errorf("transaction not valid")
+		return fmt.Errorf("")
 	}
 }

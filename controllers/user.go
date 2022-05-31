@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"training/accounts"
 	token "training/contracts"
@@ -62,31 +63,59 @@ func (controller *Controller) CreateUser(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-	// Transfer 0.1 ETH from admin's address to user's address
+	// Transfer 0.01 ETH from admin's address to user's address
 	fmt.Println("Transferring ETH...")
 	tx, err := token.TransferETH(controller.Client, controller.Keystore, adminUser.Keystore, account.Address, 1)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-
-	// Wait transaction to be mined
-	fmt.Println("Waiting for transaction to be mined...")
-	err = token.CheckTransaction(tx)
+	// Track the transaction
+	err = token.TrackTransaction(tx)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+	fmt.Println("Sent transaction to the tracker...")
 
-	// Create the user
-	fmt.Println("Creating user...")
-	err = repos.CreateUser(controller.Db, &user)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
-		return
-	}
+	// Use goroutine to wait for the transaction to be mined
+	go func() {
+		// Waiting the status in the database to be changed
+		var transaction models.Transaction
+		ticker := time.NewTicker(time.Second)
+		quit := make(chan struct{})
+
+	loop:
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("Checking the status...")
+				err = repos.CheckTransactionIsConfirmed(controller.Db, &transaction, tx.Hash().Hex())
+				if err == nil {
+					break loop
+				}
+			case <-quit:
+				ticker.Stop()
+				break loop
+			}
+		}
+		fmt.Println("Transaction is confirmed...")
+
+		// Create the user
+		fmt.Println("Creating user...")
+		err = repos.CreateUser(controller.Db, &user)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+		fmt.Println("User created...")
+	}()
+
+	// Make response right after the transaction has been sent to ther tracker.
 	c.JSON(http.StatusOK, gin.H{
-		"token": user.Token,
+		"message": "Transaction has been sent to the tracker. Can check status at transaction table in database",
+		"tx":      tx.Hash().Hex(),
+		"token":   user.Token,
 	})
 }
 

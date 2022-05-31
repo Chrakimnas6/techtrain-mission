@@ -26,7 +26,7 @@ func setupServer() *gin.Engine {
 	db := db.Init()
 
 	// Set up Ethereum network
-	client, err := ethclient.Dial("***")
+	client, err := ethclient.Dial("https://eth-ropsten.alchemyapi.io/v2/7dUV0BkLoNzB8UA6bPM9jgrxIzVmSyxG")
 	if err != nil {
 		log.Fatal(err)
 	}

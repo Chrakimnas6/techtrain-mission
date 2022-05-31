@@ -2,7 +2,6 @@ package transactions
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -22,7 +21,6 @@ func CheckIfInBlockchain(client *ethclient.Client, txHex string) (err error) {
 				return err
 			}
 			if !isPending {
-				fmt.Println("Transaction mined!")
 				return nil
 			}
 		case <-quit:

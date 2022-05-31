@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto-tool/controllers"
+	"crypto-tool/db"
 	"log"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -15,7 +16,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	controller := controllers.Controller{Client: client}
+	db := db.Init()
+
+	controller := controllers.Controller{
+		Db:     db,
+		Client: client,
+	}
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
